@@ -1,0 +1,3 @@
+Albert Wang, 3rd-year CS major. 
+My Mafia project aims to provide an engaging and interactive way to explore the behavior and limitations of LLMs in social and strategic contexts, such as games.
+While the primary goal of Mafia is social deduction and role-playing, this project adds a unique twist by introducing LLMs as hidden players. Human players interact with both AI and real players, and the additional challenge of identifying the LLM creates a fun and engaging way to explore the behavior of LLMs in social contexts.
