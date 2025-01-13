@@ -6,7 +6,7 @@ Meeting Time: lect02
 
 Type of meeting: stand up
 
-Team: Priyanka Ballani [X], Shivani Madhan [X], [X], 
+Team: Priyanka Ballani [X], Shivani Madhan [X], Victor Prchlik [X], Albert Wang [X], Hung Khuu [X], Tyler Tran [X], Siddhant Subramanian[X]
 
 Discussion:
 
