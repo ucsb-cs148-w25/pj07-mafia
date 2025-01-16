@@ -51,10 +51,8 @@ Replace `<repository-url>` with the URL of the repository containing the app.
 Change into the project directory:
 
 ```bash
-cd <project-folder>
+cd helloWorld/helloWorld_AW
 ```
-
-Replace `<project-folder>` with the directory name of the cloned repository.
 
 ### Step 3: Install Dependencies
 
