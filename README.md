@@ -48,7 +48,7 @@ MafAi, the mafia app with AI introduces an innovative twist to the classic socia
   - Monitor active games for performances and bugs.
   - Moderate lobbies and handle reports of inappropriate content(like metagaming/cheating)
 
-  ## Roles and Permissions:
+## Roles and Permissions:
   - Player Permissions: Limited to game-related actions (e.g., joining lobbies, voting).
   - Admin Permissions: Ability to pause games, remove players, and moderate content.
 
