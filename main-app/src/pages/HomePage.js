@@ -59,6 +59,11 @@ function HomePage() {
     }
   };
 
+  // Navigate to the chatroom
+  const handleGoToChatroom = () => {
+    navigate('/chatroom');
+  };
+
   return (
     <div style={containerStyle}>
       <h1 style={titleStyle}>Welcome to the Mafia Game</h1>
@@ -81,6 +86,14 @@ function HomePage() {
           onClick={handleJoinLobby}
         >
           Join Lobby
+        </button>
+        <button
+          style={buttonStyle}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#555')}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#333')}
+          onClick={handleGoToChatroom}
+        >
+          Chatroom
         </button>
       </div>
     </div>

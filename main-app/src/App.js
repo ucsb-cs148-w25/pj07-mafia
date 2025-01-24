@@ -1,7 +1,9 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import LobbyPage from './pages/LobbyPage';
+
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import LobbyPage from "./pages/LobbyPage";
+import ChatroomPage from "./pages/ChatroomPage";
 
 function App() {
   return (
@@ -14,6 +16,7 @@ function App() {
         */}
         <Route path="/lobby" element={<LobbyPage />} />
         <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
+        <Route path="/chatroom" element={<ChatroomPage />} />
       </Routes>
     </Router>
   );
