@@ -1,0 +1,17 @@
+{
+  "name": "chatroom-server",
+  "version": "1.0.0",
+  "main": "chat-server.js",
+  "scripts": {
+    "start": "node chat-server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "socket.io": "^4.8.1"
+  }
+}
+
