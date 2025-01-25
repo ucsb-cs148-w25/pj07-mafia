@@ -48,7 +48,15 @@ function HomePage() {
 
   // "Create Lobby" navigates to /lobby (no ID) => the LobbyPage will create a new one
   const handleCreateLobby = () => {
-    navigate('/lobby');
+    let lobbyID = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < 4) {
+      lobbyID += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    navigate(`/lobby/${lobbyID}`);
   };
 
   // "Join Lobby" prompts for an ID => navigates to /lobby/:id => the LobbyPage joins that lobby
