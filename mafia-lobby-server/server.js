@@ -17,6 +17,7 @@ const io = new Server(server, {
 
 // We'll store all lobbies in memory for this demo
 let lobbies = {};
+const MIN_PLAYERS = 3;
 
 // When a client connects via Socket.IO
 io.on('connection', (socket) => {
@@ -58,6 +59,11 @@ io.on('connection', (socket) => {
       });
 
       console.log(`Socket ${socket.id} joined lobby: ${lobbyId}`);
+
+      if (lobby.players.length >= MIN_PLAYERS) {
+        console.log(`Lobby ${lobbyId} has enough players. Ready to start game.`);
+        io.to(lobbyId).emit('startGame', { players: lobby.players });
+      }
     } else {
       // If the lobby doesn't exist, notify the client
       socket.emit('lobbyError', {

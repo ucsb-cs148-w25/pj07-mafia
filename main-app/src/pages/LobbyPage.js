@@ -9,6 +9,7 @@ function LobbyPage() {
   const [socket, setSocket] = useState(null);
   const [lobbyId, setLobbyId] = useState(routeLobbyId || '');
   const [players, setPlayers] = useState([]);
+  const [isGameReady, setIsGameReady] = useState(false);
 
   // Connect to the server once when the component mounts
   useEffect(() => {
@@ -39,6 +40,16 @@ function LobbyPage() {
       alert(err.message);
       navigate('/'); // go back to home if there's an error
     });
+
+    socket.on('startGame', (data) => {
+      console.log('Ready to start game!');
+      setIsGameReady(true);
+    });
+
+    // socket.on('startChatroom', () => {
+    //   console.log('Lobby started! Navigating to chatroom...');
+    //   navigate('/chatroom');
+    // });
   }, [socket, navigate]);
 
   // Decide whether to create or join a lobby (based on URL param)
@@ -78,8 +89,21 @@ function LobbyPage() {
     fontSize: '2rem',
   };
 
+  const startButtonStyle = {
+    marginTop: '20px',
+    marginRight: '10px',
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '8px',
+    backgroundColor: '#333',
+    color: '#fff',
+    fontSize: '1rem',
+    cursor: 'pointer',
+  };
+  
   const backButtonStyle = {
     marginTop: '20px',
+    marginLeft: '10px',
     padding: '0.5rem 1rem',
     border: 'none',
     borderRadius: '8px',
@@ -91,6 +115,10 @@ function LobbyPage() {
 
   const handleBackToHome = () => {
     navigate('/');
+  };
+
+  const handleStartGame = () => {
+    navigate('/chatroom');
   };
 
   return (
@@ -123,6 +151,12 @@ function LobbyPage() {
             </li>
           ))}
         </ul>
+
+        {isGameReady && (
+        <button style={startButtonStyle} onClick={handleStartGame}>
+          Start Game
+        </button>
+      )}
 
         <button style={backButtonStyle} onClick={handleBackToHome}>
           Back to Home
