@@ -1,5 +1,23 @@
 // server/controllers/lobbyController.js
-
+/* 
+This controller file will handle lobby lifecycles
+- Create/join lobbies
+- Game start validation
+- Player management
+*/
+/**
+ * Handles lobby-related Socket.IO events
+ * Events:
+ * - create_lobby
+ * - join_lobby
+ * - start_game
+ * - player_disconnect
+ * Responsibilities:
+ * - Lobby instance management
+ * - Player validation
+ * - Error handling
+ * - Socket room management
+ */
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (io) => {

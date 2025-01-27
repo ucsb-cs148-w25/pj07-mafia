@@ -1,5 +1,16 @@
 // server/controllers/chatController.js
-
+/**
+ * Manages in-game chat system
+ * Events:
+ * - send_message
+ * - chat_history
+ * Responsibilities:
+ * - Message validation
+ * - Phase-based chat restrictions
+ * - Chat logging
+ * - System announcements
+ * - Player mute management
+ */
 module.exports = (io) => {
     io.on('connection', (socket) => {
       console.log('User connected to chatroom:', socket.id);

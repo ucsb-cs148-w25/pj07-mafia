@@ -1,5 +1,13 @@
 // server/server.js
-
+/**
+ * Entry point and core server setup
+ * Responsibilities:
+ * - Initialize Express/Socket.IO
+ * - Attach controllers
+ * - Manage middleware
+ * - Handle server errors
+ * - Coordinate cross-controller communication
+ */
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
