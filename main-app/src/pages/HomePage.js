@@ -60,9 +60,9 @@ function HomePage() {
   };
 
   // Navigate to the chatroom
-  const handleGoToChatroom = () => {
-    navigate('/chatroom');
-  };
+  // const handleGoToChatroom = () => {
+  //   navigate('/chatroom');
+  // };
 
   return (
     <div style={containerStyle}>
@@ -87,14 +87,14 @@ function HomePage() {
         >
           Join Lobby
         </button>
-        <button
+        {/* <button
           style={buttonStyle}
           onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#555')}
           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#333')}
           onClick={handleGoToChatroom}
         >
           Chatroom
-        </button>
+        </button> */}
       </div>
     </div>
   );

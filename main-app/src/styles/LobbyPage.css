@@ -1,0 +1,87 @@
+/* LobbyPage.css */
+
+/* Page container */
+.lobby-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #8e9eab, #eef2f3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card container */
+.lobby-card {
+  background-color: #fff;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+/* Heading */
+.lobby-heading {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+/* Input field */
+.lobby-input {
+  padding: 0.5rem;
+  width: 80%;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Generic button */
+.lobby-button {
+  margin-top: 10px;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.lobby-button:hover {
+  opacity: 0.9;
+}
+
+/* Specific button styles */
+.lobby-button-start {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.lobby-button-back {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.lobby-button-join {
+  background-color: #007bff;
+  color: #fff;
+}
+
+/* Player list */
+.lobby-players-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.lobby-player-item {
+  margin-bottom: 8px;
+  background: #f4f4f4;
+  border-radius: 4px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+}
+
+.lobby-player-item span {
+  margin-right: 8px;
+}

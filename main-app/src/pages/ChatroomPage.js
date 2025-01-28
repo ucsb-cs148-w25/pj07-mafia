@@ -1,104 +1,131 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import io from "socket.io-client";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import socket from "../service/socket";
 import "../styles/ChatroomPage.css";
-
-const socket = io("http://localhost:3001");
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
+  const { lobbyId } = useParams();
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [username, setUsername] = useState("");
+  const messagesEndRef = useRef(null);
 
+  // 1. Retrieve username from localStorage
   useEffect(() => {
-    // Listen for incoming messages
-    socket.on("message", (newMessage) => {
-      // Add the message only if it is not already in the local messages array
-      setMessages((prev) => {
-        if (newMessage.sender === socket.id) return prev; // Avoid duplicate
-        return [...prev, newMessage];
-      });
-    });
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    } else {
+      // If no username was found in localStorage, redirect to home
+      navigate("/");
+    }
+  }, [navigate]);
+
+  // 2. Scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // 3. Handle incoming messages and socket events
+  useEffect(() => {
+    if (!socket) return;
+
+    function handleMessage(newMessage) {
+      setMessages((prev) => [...prev, newMessage]);
+    }
+
+    function handleLobbyError(err) {
+      alert(err.message);
+      navigate("/");
+    }
+
+    socket.on("message", handleMessage);
+    socket.on("lobbyError", handleLobbyError);
 
     return () => {
-      socket.off("message");
+      socket.off("message", handleMessage);
+      socket.off("lobbyError", handleLobbyError);
     };
-  }, []);
+  }, [navigate]);
 
+  // 4. Join the chatroom
+  useEffect(() => {
+    if (!socket || !lobbyId || !username) return;
+
+    socket.emit("joinChatroom", { lobbyId, username });
+
+    // If this component unmounts, leave the chatroom
+    return () => {
+      socket.emit("leaveChatroom", { lobbyId, username });
+    };
+  }, [lobbyId, username]);
+
+  // 5. Handle sending a message
   const handleSendMessage = () => {
     if (message.trim()) {
-      const messageData = {
-        text: message,
-        sender: socket.id, // Use the socket ID as the sender
-      };
-      setMessages((prev) => [...prev, messageData]); // Add the message locally
-      socket.emit("sendMessage", { text: message }); // Send the message text to the server
-      setMessage(""); // Clear the input box
+      // We ONLY send lobbyId and text.
+      // The server (chatSocket.js) will override "sender" and "timestamp"
+      socket.emit("sendMessage", {
+        lobbyId,
+        text: message.trim(),
+      });
+      setMessage("");
     }
   };
 
+  // 6. Handle "Enter" key press
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      if (e.shiftKey) {
-        setMessage((prev) => prev + "\n"); // Add newline on Shift + Enter
-      } else {
-        e.preventDefault(); // Prevent new line in the input field
-        handleSendMessage();
-      }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
+  // 7. Go back to home
   const handleBackToHome = () => {
     navigate("/");
   };
 
   return (
     <div className="chatroom-container">
+      {/* Header */}
       <div className="chatroom-header">
-        Chatroom
+        <h2>Chatroom</h2>
         <button className="back-button" onClick={handleBackToHome}>
           Back to Home
         </button>
       </div>
+
+      {/* Messages Display */}
       <div className="chatroom-messages">
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`chatroom-message ${
-              msg.sender === socket.id ? "me" : "other"
-            }`}
-          >
-            {msg.sender !== socket.id && (
-              <span className="sender-label">{msg.sender}</span>
-            )}
-            {msg.text}
+          <div key={idx} className="chatroom-message">
+            <span className="chatroom-timestamp">
+              {new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>{" "}
+            <span className="chatroom-username">{msg.sender}:</span>{" "}
+            <span className="chatroom-text">{msg.text}</span>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* Input Container */}
       <div className="chatroom-input-container">
         <textarea
-          rows="5"
           className="chatroom-input"
+          rows="2"
           placeholder="Type your message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyPress}
         />
         <button className="chatroom-send-button" onClick={handleSendMessage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 19V5" />
-            <path d="M5 12l7-7 7 7" />
-          </svg>
+          Send
         </button>
       </div>
     </div>

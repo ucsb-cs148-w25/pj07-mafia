@@ -38,97 +38,58 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  font-family: Arial, sans-serif;
+  font-size: 1rem;
 }
 
 /* Individual messages */
 .chatroom-message {
-  max-width: 60%;
-  padding: 10px 15px;
-  border-radius: 15px;
-  word-wrap: break-word;
-  white-space: pre-wrap; /* Preserve newlines */
-  font-family: Arial, sans-serif;
-  font-size: 1rem;
-  line-height: 1.5;
+  margin-bottom: 10px;
+  line-height: 1.4;
 }
 
-/* Sender's messages (Me) */
-.chatroom-message.me {
-  align-self: flex-end;
-  background-color: #007bff;
-  color: white;
-  text-align: right; /* Align text to the right */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-}
-
-/* Recipient's messages (Other) */
-.chatroom-message.other {
-  align-self: flex-start;
-  background-color: #e9ecef;
-  color: black;
-  text-align: left; /* Align text to the left */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-}
-
-/* Add a unique style for the sender label in the recipient's messages */
-.chatroom-message .sender-label {
-  display: block;
-  font-size: 0.8rem;
+/* Username */
+.chatroom-username {
   font-weight: bold;
-  margin-bottom: 5px;
-  color: #555;
+  color: #333;
+}
+
+/* Timestamp */
+.chatroom-timestamp {
+  font-size: 0.8rem;
+  color: #666;
+  margin-right: 5px;
 }
 
 /* Input container */
 .chatroom-input-container {
   display: flex;
   align-items: center;
+  padding: 10px;
   background-color: #f0f0f0;
-  border-radius: 25px;
-  padding: 5px 10px;
-  margin: 16px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #ddd;
 }
 
 /* Input box */
 .chatroom-input {
   flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 15px;
-  outline: none;
-  resize: none;
-  margin-right: 10px;
-  background: transparent;
-  font-family: Arial, sans-serif;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   font-size: 1rem;
 }
 
-/* Send button inside the type box */
+/* Send button */
 .chatroom-send-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  margin-left: 10px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 50%;
+  border-radius: 4px;
   background-color: #007bff;
   color: white;
-  margin-left: 10px; /* Space between textarea and button */
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Button shadow */
 }
 
 .chatroom-send-button:hover {
   background-color: #0056b3;
-}
-
-.chatroom-send-button svg {
-  stroke: white;
-  width: 18px;
-  height: 18px;
 }

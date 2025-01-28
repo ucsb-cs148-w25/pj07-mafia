@@ -1,132 +1,167 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import socket from "../service/socket";
+import "../styles/LobbyPage.css"; // Import your CSS
 
 function LobbyPage() {
-  const { lobbyId: routeLobbyId } = useParams(); // read the :lobbyId param from the URL
+  const { lobbyId: routeLobbyId } = useParams();
   const navigate = useNavigate();
-  
-  const [socket, setSocket] = useState(null);
-  const [lobbyId, setLobbyId] = useState(routeLobbyId || '');
+
+  // Store an array of players as: [{ id, name }, ...]
   const [players, setPlayers] = useState([]);
+  const [lobbyId, setLobbyId] = useState(routeLobbyId || "");
+  const [isGameReady, setIsGameReady] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+  const [username, setUsername] = useState("");
+  const [isUsernameSet, setIsUsernameSet] = useState(false);
 
-  // Connect to the server once when the component mounts
-  useEffect(() => {
-    const newSocket = io('http://localhost:4000'); // your server’s address
-    setSocket(newSocket);
-
-    // Cleanup
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
-
-  // Listen for events from the server
+  // Listen for lobby-related events
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('lobbyCreated', (data) => {
+    // 1. Lobby Created
+    socket.on("lobbyCreated", (data) => {
       setLobbyId(data.lobbyId);
       setPlayers(data.players);
-      console.log('Lobby created with ID:', data.lobbyId);
+      setIsCreator(data.isCreator || false);
     });
 
-    socket.on('lobbyUpdated', (data) => {
+    // 2. Lobby Updated
+    socket.on("lobbyUpdated", (data) => {
       setPlayers(data.players);
     });
 
-    socket.on('lobbyError', (err) => {
-      alert(err.message);
-      navigate('/'); // go back to home if there's an error
+    // 3. Lobby Ready
+    socket.on("lobbyReady", (data) => {
+      if (data.players) {
+        setPlayers(data.players);
+      }
+      setIsGameReady(true);
     });
-  }, [socket, navigate]);
 
-  // Decide whether to create or join a lobby (based on URL param)
+    // 4. Lobby Error
+    socket.on("lobbyError", (err) => {
+      alert(err.message);
+      navigate("/");
+    });
+
+    // 5. Creator Assigned
+    socket.on("creatorAssigned", (data) => {
+      alert(data.message);
+      setIsCreator(true);
+    });
+
+    // 6. Start Chatroom
+    socket.on("startChatroom", (data) => {
+      // data.lobbyId could be used, but we already have lobbyId in state
+      navigate(`/chatroom/${lobbyId}`);
+    });
+
+    // Cleanup event listeners on unmount
+    return () => {
+      socket.off("lobbyCreated");
+      socket.off("lobbyUpdated");
+      socket.off("lobbyReady");
+      socket.off("lobbyError");
+      socket.off("creatorAssigned");
+      socket.off("startChatroom");
+    };
+  }, [socket, navigate, lobbyId]);
+
+  // Decide whether to create or join a lobby after username is set
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !isUsernameSet) return;
 
     if (routeLobbyId) {
       // If there's a lobby ID in the URL, join that lobby
-      socket.emit('joinLobby', routeLobbyId);
+      socket.emit("joinLobby", { lobbyId: routeLobbyId, username });
     } else {
-      // Otherwise create a new one
-      socket.emit('createLobby');
+      // Otherwise, create a new lobby
+      socket.emit("createLobby", username);
     }
-  }, [routeLobbyId, socket]);
+  }, [routeLobbyId, socket, username, isUsernameSet]);
 
-  // Some basic inline styling
-  const containerStyle = {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #8e9eab, #eef2f3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-
-  const cardStyle = {
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    width: '400px',
-    maxWidth: '90%',
-    padding: '20px',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-    textAlign: 'center',
-  };
-
-  const headingStyle = {
-    marginBottom: '1rem',
-    fontSize: '2rem',
-  };
-
-  const backButtonStyle = {
-    marginTop: '20px',
-    padding: '0.5rem 1rem',
-    border: 'none',
-    borderRadius: '8px',
-    backgroundColor: '#333',
-    color: '#fff',
-    fontSize: '1rem',
-    cursor: 'pointer',
-  };
-
+  // Handlers
   const handleBackToHome = () => {
-    navigate('/');
+    navigate("/");
+  };
+
+  const handleStartGame = () => {
+    if (socket && lobbyId) {
+      socket.emit("startGame", lobbyId);
+    }
+  };
+
+  const handleUsernameSubmit = (e) => {
+    e.preventDefault();
+    if (username.trim() !== "") {
+      setIsUsernameSet(true);
+      localStorage.setItem("username", username.trim());
+    } else {
+      alert("Please enter a valid username.");
+    }
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
-        <h2 style={headingStyle}>Lobby Page</h2>
-        
-        {lobbyId && (
-          <p>
-            <strong>Lobby ID:</strong> {lobbyId}
-          </p>
-        )}
+    <div className="lobby-container">
+      <div className="lobby-card">
+        {!isUsernameSet ? (
+          <>
+            <h2 className="lobby-heading">Enter Your Username</h2>
+            <form onSubmit={handleUsernameSubmit}>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="lobby-input"
+                required
+              />
+              <br />
+              <button type="submit" className="lobby-button lobby-button-join">
+                Join Lobby
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <h2 className="lobby-heading">Lobby Page</h2>
 
-        <h3>Players in Lobby:</h3>
-        <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0' }}>
-          {players.map((player) => (
-            <li
-              key={player}
-              style={{
-                marginBottom: '8px',
-                background: '#f4f4f4',
-                borderRadius: '4px',
-                padding: '5px 10px',
-              }}
+            {lobbyId && (
+              <p>
+                <strong>Lobby ID:</strong> {lobbyId}
+              </p>
+            )}
+
+            <h3>Players in Lobby:</h3>
+            <ul className="lobby-players-list">
+              {players.map((player) => (
+                <li key={player.id} className="lobby-player-item">
+                  <span role="img" aria-label="player">
+                    👤
+                  </span>{" "}
+                  {player.name}
+                </li>
+              ))}
+            </ul>
+
+            {isCreator && isGameReady && (
+              <button
+                className="lobby-button lobby-button-start"
+                onClick={handleStartGame}
+              >
+                Start Game
+              </button>
+            )}
+
+            <button
+              className="lobby-button lobby-button-back"
+              onClick={handleBackToHome}
             >
-              <span role="img" aria-label="player" style={{ marginRight: '8px' }}>
-                👤
-              </span>
-              {player}
-            </li>
-          ))}
-        </ul>
-
-        <button style={backButtonStyle} onClick={handleBackToHome}>
-          Back to Home
-        </button>
+              Back to Home
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

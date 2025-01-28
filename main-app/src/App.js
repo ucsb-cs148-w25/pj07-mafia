@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
@@ -10,13 +9,13 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        {/* 
-          /lobby => no ID => LobbyPage will create a new lobby
-          /lobby/:lobbyId => join an existing lobby 
-        */}
+        {/* /lobby => no ID => LobbyPage will create a new lobby */}
         <Route path="/lobby" element={<LobbyPage />} />
+        {/* /lobby/:lobbyId => join an existing lobby */}
         <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
-        <Route path="/chatroom" element={<ChatroomPage />} />
+        {/* IMPORTANT: /chatroom/:lobbyId => dynamic path for the chatroom */}
+        <Route path="/chatroom/:lobbyId" element={<ChatroomPage />} />
+
       </Routes>
     </Router>
   );
