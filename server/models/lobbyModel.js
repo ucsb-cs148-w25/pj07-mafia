@@ -1,5 +1,12 @@
 // server/models/lobbyModel.js
-
+/*
+lobbyModel.js
+Description:
+Defines the structure and data for a lobby.
+Key Responsibilities:
+Maintain lobby-specific properties (e.g., ID, creator, players).
+Store in-memory or database schema for lobbies.
+*/
 /**
  * Represents a game lobby.
  * 

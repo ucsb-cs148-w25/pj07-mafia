@@ -1,5 +1,13 @@
 // server/controllers/lobbyController.js
-
+/*
+lobbyController.js
+Description:
+Handles RESTful API endpoints related to lobby management.
+Key Responsibilities:
+API to create or delete lobbies.
+API to fetch lobby details (e.g., list of players, status).
+Works closely with the LobbyService.js for business logic.
+*/
 const express = require('express');
 const router = express.Router();
 

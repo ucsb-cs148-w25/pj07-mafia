@@ -1,5 +1,14 @@
 // server/server.js
-
+/*
+server/
+server.js
+Description:
+This is the entry point for the backend server. It sets up the server, initializes WebSocket and HTTP handling, and establishes routes and middleware.
+Key Responsibilities:
+Configure the server (e.g., port, middleware).
+Initialize socket.io for real-time communication.
+Attach controllers and sockets to handle application logic.
+*/
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');

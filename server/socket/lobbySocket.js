@@ -1,5 +1,13 @@
 // server/socket/lobbySocket.js
-
+/*
+lobbySocket.js
+Description:
+Manages WebSocket events for the lobby system.
+Key Responsibilities:
+Handle lobby creation, joining, and updates.
+Broadcast lobby status to all players in the room.
+Check if the lobby meets the requirements to start a game.
+*/
 const lobbyService = require('../services/lobbyService');
 
 function initLobbySocket(io) {
