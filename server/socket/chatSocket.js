@@ -1,5 +1,13 @@
 // server/socket/chatSocket.js
-
+/*
+chatSocket.js
+Description:
+Manages WebSocket events for the chat system.
+Key Responsibilities:
+Handle user connection to chatrooms.
+Broadcast messages to all users in a chatroom.
+Notify when users join or leave the chat.
+*/
 const lobbyService = require('../services/lobbyService');
 
 function initChatSocket(io) {

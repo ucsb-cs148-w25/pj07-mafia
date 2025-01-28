@@ -1,5 +1,12 @@
 // server/controllers/chatController.js
-
+/*
+chatController.js
+Description:
+Handles RESTful API endpoints related to the chat system (if any).
+Key Responsibilities:
+Expose APIs for managing chat history, configuration, or settings.
+Primarily interacts with the chatSocket.js for real-time messaging.
+*/
 const express = require('express');
 const router = express.Router();
 

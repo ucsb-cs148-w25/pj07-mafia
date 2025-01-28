@@ -1,5 +1,13 @@
 // server/services/lobbyService.js
-
+/*
+LobbyService.js
+Description:
+Contains business logic related to lobbies.
+Key Responsibilities:
+Create, join, or manage lobbies.
+Validate lobby readiness to start a game.
+Retrieve or update lobby details.
+*/
 const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
