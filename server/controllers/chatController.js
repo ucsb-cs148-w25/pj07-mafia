@@ -1,35 +1,20 @@
 // server/controllers/chatController.js
 
-module.exports = (io) => {
-    io.on('connection', (socket) => {
-      console.log('User connected to chatroom:', socket.id);
-  
-      // Handle "sendMessage" event
-      socket.on('sendMessage', ({ lobbyId, text, sender }) => {
-        const enrichedMessage = {
-          text,             // The message text
-          sender,           // The sender's username or ID
-          timestamp: new Date(), // Optional: Add a timestamp
-        };
-        // Broadcast the message to all clients in the specified lobby
-        io.to(lobbyId).emit('message', enrichedMessage);
-        console.log(`Message from ${sender} in lobby ${lobbyId}: ${text}`);
-      });
+const express = require('express');
+const router = express.Router();
 
-      socket.on("joinChatroom", ({ lobbyId, username }) => {
-        socket.join(lobbyId);
-        // optional system message
-        socket.to(lobbyId).emit("message", {
-          text: `${username} has joined the chat.`,
-          sender: "System",
-          timestamp: new Date(),
-        });
-      });      
-  
-      // Handle client disconnect
-      socket.on('disconnect', () => {
-        console.log('User disconnected from chatroom:', socket.id);
-      });
-    });
-  };
-  
+/**
+ * In the future, if you decide you want:
+ * - Get chat history
+ * - Store chat messages in DB
+ * - Provide a REST endpoint to retrieve them
+ * 
+ * You can implement those here. For now, it's a placeholder.
+ */
+
+// Example: GET /api/chat/test
+router.get('/test', (req, res) => {
+  return res.json({ message: 'Chat Controller Placeholder' });
+});
+
+module.exports = router;

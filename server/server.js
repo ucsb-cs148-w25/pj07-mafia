@@ -4,12 +4,22 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 
-// Import Controllers
-const chatController = require('./controllers/chatController');
+// Socket initializers
+const { initLobbySocket } = require('./socket/lobbySocket');
+const { initChatSocket } = require('./socket/chatSocket');
+
+// (Optional) Express-based Controllers
 const lobbyController = require('./controllers/lobbyController');
+const chatController = require('./controllers/chatController');
 
 // Initialize Express App
 const app = express();
+app.use(express.json());
+
+// Mount your REST controllers here if you plan to keep them
+// (These are optional if you're going pure websockets)
+app.use('/api/lobby', lobbyController);
+app.use('/api/chat', chatController);
 
 // Create HTTP Server
 const server = http.createServer(app);
@@ -17,14 +27,14 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: '*', // Adjust as needed for production
+    origin: '*', // For development; limit in production
     methods: ['GET', 'POST'],
   },
 });
 
-// Attach Controllers to Socket.IO
-chatController(io);  // For chatroom functionalities
-lobbyController(io); // For lobby functionalities
+// Attach Socket Listeners
+initLobbySocket(io);
+initChatSocket(io);
 
 // Start the Server
 const PORT = 4000;
