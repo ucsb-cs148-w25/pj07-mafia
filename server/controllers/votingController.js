@@ -1,21 +1,9 @@
-// server/controllers/votingController.js
-
 /*
-This controller handles vote handling.
-- Day votes
-- Mafia votes
-- Special role votes(Doctor, Sheriff): Not yet for MVP
-- Result calculation
+votingController.js
+Description:
+Handles APIs related to the voting system.
+Key Responsibilities:
+API to retrieve voting results or logs.
+Works with votingSocket.js to capture real-time votes during the game.
 */
-/**
- * Handles voting mechanics
- * Events:
- * - cast_vote
- * - vote_result
- * Responsibilities:
- * - Vote validation
- * - Vote tallying
- * - Result announcement
- * - Vote type management (day/mafia/doctor)
- * - Tie resolution
- */
+
