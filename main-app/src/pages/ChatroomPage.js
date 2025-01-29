@@ -9,6 +9,10 @@ const ChatroomPage = () => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
+  const [seconds, setSeconds] = useState(10); // Set 10 for testing, change to 60 for actual game
+  const [isRunning, setIsRunning] = useState(true);
+  const [isNightMode, setIsNightMode] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
   const messagesEndRef = useRef(null);
 
   // 1. Retrieve username from localStorage
@@ -17,7 +21,6 @@ const ChatroomPage = () => {
     if (storedUsername) {
       setUsername(storedUsername);
     } else {
-      // If no username was found in localStorage, redirect to home
       navigate("/");
     }
   }, [navigate]);
@@ -55,17 +58,90 @@ const ChatroomPage = () => {
 
     socket.emit("joinChatroom", { lobbyId, username });
 
-    // If this component unmounts, leave the chatroom
     return () => {
       socket.emit("leaveChatroom", { lobbyId, username });
     };
   }, [lobbyId, username]);
 
-  // 5. Handle sending a message
+  // 5. Timer Effect
+  // useEffect(() => {
+  //   if (!isRunning || isRestarting) return;
+
+  //   const timer = setInterval(() => {
+  //     setSeconds((prev) => {
+  //       if (prev === 1) { // Use 1 instead of 0 to prevent double triggers
+  //         clearInterval(timer);
+
+  //         if (isNightMode) {
+  //           setIsNightMode(false);
+  //         }
+  //         else {
+  //           setIsNightMode(true);
+  //           socket.emit("nightTime", {
+  //             lobbyId
+  //           });
+  //         }
+
+  //         setTimeout(() => {
+  //           setSeconds(10); // Restart timer (change to 60 in actual game)
+  //           setIsRestarting(true);
+  //         }, 1000); // 1 sec before restarting
+
+  //         return 0;
+  //       }
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+
+  //   return () => clearInterval(timer);
+  // }, [isRunning, isRestarting, socket, lobbyId]);
+
+  useEffect(() => {
+    if (!isRunning || isRestarting) return;
+  
+    const timer = setInterval(() => {
+      setSeconds((prev) => {
+        if (prev === 1) { 
+          clearInterval(timer);
+  
+          setIsNightMode((prevMode) => {
+            const newMode = !prevMode;
+            
+            if (newMode) {
+              socket.emit("nightTime", { lobbyId }); // 🔹 Emit only when switching to night mode
+            }
+            
+            return newMode;
+          });
+  
+          setTimeout(() => {
+            setSeconds(10); // Restart timer (change to 60 in actual game)
+            setIsRestarting(true);
+          }, 1000); 
+  
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  
+    return () => clearInterval(timer);
+  }, [isRunning, isRestarting, socket, lobbyId]);
+
+  useEffect(() => {
+    if (isRestarting) {
+      setIsRestarting(false); // Reset restart flag after timer is set to new value
+    }
+  }, [isRestarting]);
+
+  // 6. Set Night Mode
+  // const handleChangeToNight = () => {
+  //   setIsNightMode(true);
+  // };
+
+  // 7. Handle Sending Messages
   const handleSendMessage = () => {
     if (message.trim()) {
-      // We ONLY send lobbyId and text.
-      // The server (chatSocket.js) will override "sender" and "timestamp"
       socket.emit("sendMessage", {
         lobbyId,
         text: message.trim(),
@@ -74,7 +150,7 @@ const ChatroomPage = () => {
     }
   };
 
-  // 6. Handle "Enter" key press
+  // 8. Handle "Enter" Key Press
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -82,32 +158,37 @@ const ChatroomPage = () => {
     }
   };
 
-  // 7. Go back to home
+  // 9. Go back to home
   const handleBackToHome = () => {
     navigate("/");
   };
 
   return (
-    <div className="chatroom-container">
+    <div className={`chatroom-container ${isNightMode ? "chatroom-container-night" : ""}`}>
       {/* Header */}
-      <div className="chatroom-header">
+      <div className={`chatroom-header ${isNightMode ? "chatroom-header-night" : ""}`}>
         <h2>Chatroom</h2>
-        <button className="back-button" onClick={handleBackToHome}>
+        <button className={`back-button ${isNightMode ? "back-button-night" : ""}`} onClick={handleBackToHome}>
           Back to Home
         </button>
+        <div className="timer">
+          {Math.floor(seconds / 60)}:{seconds % 60 < 10 ? `0${seconds % 60}` : seconds % 60}
+        </div>
       </div>
 
       {/* Messages Display */}
-      <div className="chatroom-messages">
+      <div className={`chatroom-messages ${isNightMode ? "chatroom-messages-night" : ""}`}>
         {messages.map((msg, idx) => (
           <div key={idx} className="chatroom-message">
-            <span className="chatroom-timestamp">
+            <span className={`chatroom-timestamp ${isNightMode ? "chatroom-timestamp-night" : ""}`}>
               {new Date(msg.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
             </span>{" "}
-            <span className="chatroom-username">{msg.sender}:</span>{" "}
+            <span className={`chatroom-username ${isNightMode ? "chatroom-username-night" : ""}`}>
+              {msg.sender}:
+            </span>{" "}
             <span className="chatroom-text">{msg.text}</span>
           </div>
         ))}
@@ -115,7 +196,7 @@ const ChatroomPage = () => {
       </div>
 
       {/* Input Container */}
-      <div className="chatroom-input-container">
+      <div className={`chatroom-input-container ${isNightMode ? 'hidden' : ''}`}>
         <textarea
           className="chatroom-input"
           rows="2"
@@ -124,7 +205,7 @@ const ChatroomPage = () => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyPress}
         />
-        <button className="chatroom-send-button" onClick={handleSendMessage}>
+        <button className={`chatroom-send-button ${isNightMode ? "chatroom-send-button-night" : ""}`}  onClick={handleSendMessage}>
           Send
         </button>
       </div>

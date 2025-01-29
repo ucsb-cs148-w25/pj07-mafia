@@ -87,6 +87,10 @@ function initChatSocket(io) {
       console.log(`Message from ${actualUsername} in lobby ${lobbyId}: ${text}`);
     });
 
+    socket.on('nightTime', ({ lobbyId }) => {
+      console.log(`Night time event triggered for lobby ${lobbyId}`);
+    });
+
     /**
      * Optional: Leave Chatroom
      * If your front end emits "leaveChatroom" when the user navigates away or closes,
@@ -111,7 +115,26 @@ function initChatSocket(io) {
     socket.on('disconnect', () => {
       console.log('User disconnected from chatroom:', socket.id);
     });
+
+    /**
+     * Night time
+     * The timer reaches 0. 
+     */
+    
+
   });
+
+  socket.on("nightTime", ({ lobbyId }) => {
+    console.log(`Night time event triggered for lobby ${lobbyId}`);
+  
+    // Send a system message to all players in the chatroom
+    socket.to(lobbyId).emit("message", {
+      text: "It is night time!",
+      sender: "System",
+      timestamp: new Date(),
+    });
+  });
+
 }
 
 module.exports = { initChatSocket };

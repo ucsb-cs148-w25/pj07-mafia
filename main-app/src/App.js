@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import LobbyPage from "./pages/LobbyPage";
 import ChatroomPage from "./pages/ChatroomPage";
+import TimerPage from "./pages/TimerPage";
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
         <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
         {/* IMPORTANT: /chatroom/:lobbyId => dynamic path for the chatroom */}
         <Route path="/chatroom/:lobbyId" element={<ChatroomPage />} />
-
+        <Route path="/timer" element={<TimerPage />} />
       </Routes>
     </Router>
   );
