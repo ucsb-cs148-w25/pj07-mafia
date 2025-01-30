@@ -18,7 +18,6 @@ const router = express.Router();
  * 
  * You can implement those here. For now, it's a placeholder.
  */
-
 // Example: GET /api/chat/test
 router.get('/test', (req, res) => {
   return res.json({ message: 'Chat Controller Placeholder' });

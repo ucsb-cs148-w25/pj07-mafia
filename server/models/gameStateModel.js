@@ -1,3 +1,4 @@
+//server/models/gameStateModel.js
 /*
 gameStateModel.js
 Description:
@@ -6,3 +7,4 @@ Key Responsibilities:
 Track game progress (e.g., current phase, eliminated players).
 Persist data during day/night cycles.
 */
+

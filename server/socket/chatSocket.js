@@ -30,7 +30,6 @@ function initChatSocket(io) {
         console.log(`joinChatroom: Lobby ${lobbyId} does NOT exist.`);
         return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
       }
-
       // Check if the player is in that lobby
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
@@ -48,8 +47,40 @@ function initChatSocket(io) {
         sender: 'System',
         timestamp: new Date(),
       });
+      if (lobby.hasStarted) {
+        const player = lobby.players.find((p) => p.socketId === socket.id);
+        if (player && player.role) {
+          // Re-send the role
+          socket.emit('roleAssigned', {
+            role: player.role,
+            // Include anything else relevant to the player
+          });
+        }
+      }
     });
 
+    socket.on('requestRole', ({ lobbyId }) => {
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (!lobby) {
+        console.log(`requestRole: Lobby ${lobbyId} does not exist.`);
+        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
+      }
+
+      const player = lobby.players.find((p) => p.socketId === socket.id);
+      if (!player) {
+        console.log(`requestRole: Player with socketId ${socket.id} not found in Lobby ${lobbyId}.`);
+        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
+      }
+
+      if (player.role) {
+        console.log(`requestRole: Assigning role ${player.role} to ${player.username}`);
+        socket.emit('roleAssigned', { role: player.role });
+      } else {
+        console.log(`requestRole: Player ${player.username} does not have a role assigned yet.`);
+        // Optionally, you could emit an error or a default role
+        socket.emit('lobbyError', { message: 'Role not assigned yet.' });
+      }
+    });
     /**
      * Send Message
      * The client calls: socket.emit("sendMessage", { lobbyId, text });
