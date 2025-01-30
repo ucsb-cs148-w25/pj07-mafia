@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
 
-const MIN_PLAYERS = 3;
+const MIN_PLAYERS = 2;
 
 // In-memory dictionary of all lobbies, keyed by lobbyId.
 // In a production app, you'd likely store this in a database.
@@ -106,9 +106,12 @@ function canStart(lobbyId) {
  * Start the game if conditions are met.
  * @param {string} lobbyId 
  * @param {string} socketId - The socket ID of whoever is trying to start the game.
+ * @param {string} isCreator
  */
-function startGame(lobbyId, socketId) {
+function startGame(lobbyId, isCreator, socketId) {
   const lobby = getLobby(lobbyId);
+  // const creator = getCreator(isCreator);
+
   if (!lobby) {
     throw new Error('Lobby not found');
   }

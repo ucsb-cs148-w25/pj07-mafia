@@ -66,7 +66,7 @@ function LobbyPage() {
       socket.off("creatorAssigned");
       socket.off("startChatroom");
     };
-  }, [socket, navigate, lobbyId]);
+  }, [socket, navigate, lobbyId, isCreator]);
 
   // Decide whether to create or join a lobby after username is set
   useEffect(() => {
@@ -88,7 +88,7 @@ function LobbyPage() {
 
   const handleStartGame = () => {
     if (socket && lobbyId) {
-      socket.emit("startGame", lobbyId);
+      socket.emit("startGame", {lobbyId, isCreator});
     }
   };
 

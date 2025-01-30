@@ -87,10 +87,58 @@ function initChatSocket(io) {
       console.log(`Message from ${actualUsername} in lobby ${lobbyId}: ${text}`);
     });
 
-    socket.on('nightTime', ({ lobbyId }) => {
+    // socket.on('nightTime', ({ lobbyId }) => {
+    //   console.log(`Night time event triggered for lobby ${lobbyId}`);
+
+    //   socket.to(lobbyId).emit('message', {
+    //     text: `It is night time!`,
+    //     sender: 'System',
+    //     timestamp: new Date(),
+    //   });
+    // });
+
+    // socket.on('dayTime', ({ lobbyId }) => {
+    //   console.log(`Day time event triggered for lobby ${lobbyId}`);
+
+    //   socket.to(lobbyId).emit('message', {
+    //     text: `It is day time!`,
+    //     sender: 'System',
+    //     timestamp: new Date(),
+    //   });
+    // });
+
+    // const lobbyState = {}; // Store which lobbies have already triggered nightTime
+
+    socket.on('nightTime', ({ lobbyId, isCreator }) => {
       console.log(`Night time event triggered for lobby ${lobbyId}`);
+      // console.log(isCreator);
+
+      // Ensure night mode is only triggered ONCE per lobby
+      // lobbyState[lobbyId] = true; // Mark this lobby as handled 
+      if (isCreator) {
+        io.to(lobbyId).emit('message', {
+          text: `It is night time!`,
+          sender: 'System',
+          timestamp: new Date(),
+        });
+      }
     });
 
+    socket.on('dayTime', ({ lobbyId, isCreator }) => {
+      console.log(`Day time event triggered for lobby ${lobbyId}`);
+      // console.log(isCreator);
+
+      // Ensure night mode is only triggered ONCE per lobby
+      // lobbyState[lobbyId] = true; // Mark this lobby as handled 
+
+      if (isCreator) {
+        io.to(lobbyId).emit('message', {
+          text: `It is day time!`,
+          sender: 'System',
+          timestamp: new Date(),
+        });
+      }
+    });
     /**
      * Optional: Leave Chatroom
      * If your front end emits "leaveChatroom" when the user navigates away or closes,
@@ -122,17 +170,6 @@ function initChatSocket(io) {
      */
     
 
-  });
-
-  socket.on("nightTime", ({ lobbyId }) => {
-    console.log(`Night time event triggered for lobby ${lobbyId}`);
-  
-    // Send a system message to all players in the chatroom
-    socket.to(lobbyId).emit("message", {
-      text: "It is night time!",
-      sender: "System",
-      timestamp: new Date(),
-    });
   });
 
 }

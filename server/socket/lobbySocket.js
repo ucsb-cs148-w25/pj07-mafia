@@ -56,14 +56,17 @@ function initLobbySocket(io) {
     });
 
     // 3. Start Game
-    socket.on('startGame', (lobbyId) => {
+    socket.on('startGame', ({lobbyId, isCreator}) => {
       try {
-        lobbyService.startGame(lobbyId, socket.id);
+        lobbyService.startGame(lobbyId, isCreator, socket.id);
+
+        console.log(isCreator);
 
         // Notify all in lobby
         io.to(lobbyId).emit('startChatroom', {
           message: 'Game is starting!',
-          lobbyId, // So clients can route themselves
+          lobbyId,
+          isCreator // So clients can route themselves
         });
 
         console.log(`Game started for lobby: ${lobbyId}`);

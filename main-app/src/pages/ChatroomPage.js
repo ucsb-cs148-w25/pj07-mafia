@@ -5,7 +5,7 @@ import "../styles/ChatroomPage.css";
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
-  const { lobbyId } = useParams();
+  const { lobbyId, isCreator } = useParams();
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
@@ -13,6 +13,7 @@ const ChatroomPage = () => {
   const [isRunning, setIsRunning] = useState(true);
   const [isNightMode, setIsNightMode] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [isChanged, setIsChanged] = useState(false)
   const messagesEndRef = useRef(null);
 
   // 1. Retrieve username from localStorage
@@ -64,69 +65,76 @@ const ChatroomPage = () => {
   }, [lobbyId, username]);
 
   // 5. Timer Effect
-  // useEffect(() => {
-  //   if (!isRunning || isRestarting) return;
-
-  //   const timer = setInterval(() => {
-  //     setSeconds((prev) => {
-  //       if (prev === 1) { // Use 1 instead of 0 to prevent double triggers
-  //         clearInterval(timer);
-
-  //         if (isNightMode) {
-  //           setIsNightMode(false);
-  //         }
-  //         else {
-  //           setIsNightMode(true);
-  //           socket.emit("nightTime", {
-  //             lobbyId
-  //           });
-  //         }
-
-  //         setTimeout(() => {
-  //           setSeconds(10); // Restart timer (change to 60 in actual game)
-  //           setIsRestarting(true);
-  //         }, 1000); // 1 sec before restarting
-
-  //         return 0;
-  //       }
-  //       return prev - 1;
-  //     });
-  //   }, 1000);
-
-  //   return () => clearInterval(timer);
-  // }, [isRunning, isRestarting, socket, lobbyId]);
-
   useEffect(() => {
     if (!isRunning || isRestarting) return;
-  
+
     const timer = setInterval(() => {
       setSeconds((prev) => {
-        if (prev === 1) { 
+        if (prev === 1) { // Use 1 instead of 0 to prevent double triggers
           clearInterval(timer);
-  
-          setIsNightMode((prevMode) => {
-            const newMode = !prevMode;
-            
-            if (newMode) {
-              socket.emit("nightTime", { lobbyId }); // 🔹 Emit only when switching to night mode
-            }
-            
-            return newMode;
-          });
-  
+
+          if (isNightMode) {
+            setIsNightMode(false);
+            socket.emit("dayTime", { lobbyId, isCreator });
+            socket.off("dayTime", { lobbyId, isCreator });
+            // setIsChanged(true);
+          }
+          else {
+            setIsNightMode(true);
+            socket.emit("nightTime", { lobbyId, isCreator });
+            socket.off("nightTime", { lobbyId, isCreator });
+            // setIsChanged(true);
+          }
+
           setTimeout(() => {
             setSeconds(10); // Restart timer (change to 60 in actual game)
             setIsRestarting(true);
-          }, 1000); 
-  
+          }, 1000); // 1 sec before restarting
+
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
+    return () => {
+      socket.off("nightTime", { lobbyId, isCreator }); // Remove nightTime listener
+      socket.off("dayTime", { lobbyId, isCreator }); // Remove dayTime listener
+      clearInterval(timer); // Clear interval when the component is unmounted or timer stops
+    };
+  }, [isRunning, isRestarting, isCreator, socket, lobbyId]);
+
+  // useEffect(() => {
+  //   if (!isRunning || isRestarting) return;
   
-    return () => clearInterval(timer);
-  }, [isRunning, isRestarting, socket, lobbyId]);
+  //   const timer = setInterval(() => {
+  //     setSeconds((prev) => {
+  //       if (prev === 1) { 
+  //         clearInterval(timer);
+  
+  //         setIsNightMode((prevMode) => {
+  //           const newMode = !prevMode;
+            
+  //           if (newMode) {
+  //             socket.emit("nightTime", { lobbyId }); // 🔹 Emit only when switching to night mode
+  //           }
+            
+  //           return newMode;
+  //         });
+  
+  //         setTimeout(() => {
+  //           setSeconds(10); // Restart timer (change to 60 in actual game)
+  //           setIsRestarting(true);
+  //         }, 1000); 
+  
+  //         return 0;
+  //       }
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+  
+  //   return () => clearInterval(timer);
+  // }, [isRunning, isRestarting, socket, lobbyId]);
 
   useEffect(() => {
     if (isRestarting) {
