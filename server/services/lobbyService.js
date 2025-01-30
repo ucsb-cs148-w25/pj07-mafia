@@ -12,7 +12,8 @@ const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
 
-const MIN_PLAYERS = 3;
+const MIN_PLAYERS = 6;
+const MAX_PLAYERS = 20;
 
 // In-memory dictionary of all lobbies, keyed by lobbyId.
 // In a production app, you'd likely store this in a database.
@@ -72,6 +73,9 @@ function joinLobby(lobbyId, socketId, username) {
   const lobby = getLobby(lobbyId);
   if (!lobby) {
     throw new Error('Lobby not found');
+  }
+  if (lobby.players.length >= MAX_PLAYERS) {
+    throw new Error('Lobby is full');
   }
   if (lobby.hasStarted) throw new Error('Game has already started');
   // Optionally, you might want to check if username is already taken in this lobby
