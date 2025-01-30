@@ -11,7 +11,7 @@ const ChatroomPage = () => {
   const [username, setUsername] = useState("");
   const messagesEndRef = useRef(null);
   const [role, setRole] = useState(null);
-  const [socketStatus, setSocketStatus] = useState("disconnected");
+  const [socketStatus, setSocketStatus] = useState(socket.connected ? "connected" : "disconnected");
 
   // Debugging logger
   const debugLog = (message, data = null) => {
@@ -27,6 +27,12 @@ const ChatroomPage = () => {
       debugLog("Username loaded from storage:", storedUsername);
     } else {
       navigate("/");
+    }
+
+    // If the socket is already connected, update the status
+    if (socket.connected) {
+      setSocketStatus("connected");
+      debugLog("Socket already connected", socket.id);
     }
 
     // Socket connection monitoring
@@ -130,6 +136,10 @@ const ChatroomPage = () => {
       if (response?.error) {
         debugLog("Join error", response.error);
         alert(response.error);
+      } else {
+        // After successfully joining the chatroom, request the role
+        debugLog("Successfully joined chatroom. Requesting role...");
+        socket.emit("requestRole", { lobbyId });
       }
     });
 
@@ -161,7 +171,7 @@ const ChatroomPage = () => {
   return (
     <div className="chatroom-container">
       <div className="connection-status">
-        Connection: {socketStatus} | Socket ID: {socket.id}
+        Connection: {socketStatus} | Socket ID: {socket.connected ? socket.id : "N/A"}
       </div>
       
       <div className="chatroom-header">
