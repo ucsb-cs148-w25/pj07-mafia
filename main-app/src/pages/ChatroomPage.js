@@ -149,30 +149,39 @@ const ChatroomPage = () => {
     };
   }, [lobbyId, username]);
 
-  // 6. Message sending with delivery confirmation
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      debugLog("Sending message", { message, lobbyId });
-      socket.emit("sendMessage", {
+// 6. Message sending with delivery confirmation (updated)
+const handleSendMessage = () => {
+  const trimmedMessage = message.trim();
+  if (trimmedMessage) {
+    // Clear input immediately
+    setMessage("");
+    
+    debugLog("Sending message", { message: trimmedMessage, lobbyId });
+    socket.emit(
+      "sendMessage",
+      {
         lobbyId,
-        text: message.trim()
-      }, (deliveryConfirmation) => {
+        text: trimmedMessage
+      },
+      (deliveryConfirmation) => {
         if (deliveryConfirmation?.error) {
           debugLog("Message delivery failed", deliveryConfirmation.error);
+          // Optional: Re-add message to input if failed
+          // setMessage(trimmedMessage);
         } else {
           debugLog("Message delivered successfully");
-          setMessage("");
         }
-      });
-    }
-  };
+      }
+    );
+  }
+};
 
   // 7. UI components with connection status display
   return (
     <div className="chatroom-container">
-      <div className="connection-status">
+      {/* <div className="connection-status">
         Connection: {socketStatus} | Socket ID: {socket.connected ? socket.id : "N/A"}
-      </div>
+      </div> */}
       
       <div className="chatroom-header">
         <h2>Chatroom</h2>
@@ -182,7 +191,7 @@ const ChatroomPage = () => {
       </div>
 
       {role && (
-        <div className="role-banner">
+        <div className={`role-banner ${role.toLowerCase() === 'mafia' ? 'mafia' : ''}`}>
           Your Role: <span className="role-name">{role}</span>
         </div>
       )}
@@ -193,7 +202,7 @@ const ChatroomPage = () => {
             <span className="chatroom-timestamp">
               {new Date(msg.timestamp).toLocaleTimeString()}
             </span>
-            <span className="chatroom-username">{msg.sender}:</span>
+            <span className="chatroom-username">{msg.sender}: </span>
             <span className="chatroom-text">{msg.text}</span>
           </div>
         ))}
@@ -207,7 +216,12 @@ const ChatroomPage = () => {
           placeholder="Type your message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault(); // Prevent default form behavior
+              handleSendMessage();
+            }
+          }}
         />
         <button className="chatroom-send-button" onClick={handleSendMessage}>
           Send
