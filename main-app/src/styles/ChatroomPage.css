@@ -93,3 +93,18 @@
 .chatroom-send-button:hover {
   background-color: #0056b3;
 }
+
+/* Role banner */
+.role-banner {
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+}
+
+.role-name {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-left: 5px;
+}

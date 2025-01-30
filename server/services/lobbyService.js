@@ -73,7 +73,7 @@ function joinLobby(lobbyId, socketId, username) {
   if (!lobby) {
     throw new Error('Lobby not found');
   }
-
+  if (lobby.hasStarted) throw new Error('Game has already started');
   // Optionally, you might want to check if username is already taken in this lobby
   // if (lobby.players.some((p) => p.username === username)) {
   //   throw new Error('Username already taken in this lobby.');
