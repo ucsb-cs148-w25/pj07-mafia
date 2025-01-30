@@ -66,7 +66,7 @@ function LobbyPage() {
       socket.off("creatorAssigned");
       socket.off("startChatroom");
     };
-  }, [socket, navigate, lobbyId, isCreator]);
+  }, [navigate, lobbyId, isCreator]);
 
   // Decide whether to create or join a lobby after username is set
   useEffect(() => {
@@ -79,7 +79,7 @@ function LobbyPage() {
       // Otherwise, create a new lobby
       socket.emit("createLobby", username);
     }
-  }, [routeLobbyId, socket, username, isUsernameSet]);
+  }, [routeLobbyId, username, isUsernameSet]);
 
   // Handlers
   const handleBackToHome = () => {

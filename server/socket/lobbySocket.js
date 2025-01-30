@@ -31,6 +31,8 @@ function initLobbySocket(io) {
       console.log(`Lobby created with ID: ${lobbyId} by ${username}`);
     });
 
+
+
     // 2. Join Lobby
     socket.on('joinLobby', ({ lobbyId, username }) => {
       try {
@@ -56,22 +58,11 @@ function initLobbySocket(io) {
     });
 
     // 3. Start Game
-    socket.on('startGame', ({lobbyId, isCreator}) => {
+    socket.on("startGame", ({ lobbyId }) => {
       try {
-        lobbyService.startGame(lobbyId, isCreator, socket.id);
-
-        console.log(isCreator);
-
-        // Notify all in lobby
-        io.to(lobbyId).emit('startChatroom', {
-          message: 'Game is starting!',
-          lobbyId,
-          isCreator // So clients can route themselves
-        });
-
-        console.log(`Game started for lobby: ${lobbyId}`);
+        gameService.startGame(lobbyId, socket.id); // ✅ Calls `gameService.startGame()`
       } catch (error) {
-        socket.emit('lobbyError', { message: error.message });
+        socket.emit("lobbyError", { message: error.message });
       }
     });
 

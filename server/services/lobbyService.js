@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
 
-const MIN_PLAYERS = 2;
+const MIN_PLAYERS = 3;
 
 // In-memory dictionary of all lobbies, keyed by lobbyId.
 // In a production app, you'd likely store this in a database.
@@ -102,38 +102,7 @@ function canStart(lobbyId) {
   return lobby.players.length >= MIN_PLAYERS && !lobby.hasStarted;
 }
 
-/**
- * Start the game if conditions are met.
- * @param {string} lobbyId 
- * @param {string} socketId - The socket ID of whoever is trying to start the game.
- * @param {string} isCreator
- */
-function startGame(lobbyId, isCreator, socketId) {
-  const lobby = getLobby(lobbyId);
-  // const creator = getCreator(isCreator);
 
-  if (!lobby) {
-    throw new Error('Lobby not found');
-  }
-
-  // Only the lobby's creator can start
-  if (socketId !== lobby.creator) {
-    throw new Error('Only the lobby creator can start the game.');
-  }
-
-  // Check if the lobby has enough players
-  if (lobby.players.length < MIN_PLAYERS) {
-    throw new Error(`Cannot start. Minimum ${MIN_PLAYERS} players required.`);
-  }
-
-  // Check if the lobby is already in a started state
-  if (lobby.hasStarted) {
-    throw new Error('Game has already started.');
-  }
-
-  // Mark the lobby as started
-  lobby.hasStarted = true;
-}
 
 /**
  * Remove a disconnected player from a lobby.
@@ -195,6 +164,5 @@ module.exports = {
   createLobby,
   joinLobby,
   canStart,
-  startGame,
   removePlayer,
 };

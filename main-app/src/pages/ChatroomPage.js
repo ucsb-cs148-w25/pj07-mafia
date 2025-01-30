@@ -5,15 +5,15 @@ import "../styles/ChatroomPage.css";
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
-  const { lobbyId, isCreator } = useParams();
+  const { lobbyId } = useParams();
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
   const [seconds, setSeconds] = useState(10); // Set 10 for testing, change to 60 for actual game
-  const [isRunning, setIsRunning] = useState(true);
+  //const [isRunning, setIsRunning] = useState(true);
   const [isNightMode, setIsNightMode] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const [isChanged, setIsChanged] = useState(false)
+  //const [isChanged, setIsChanged] = useState(false)
   const messagesEndRef = useRef(null);
 
   // 1. Retrieve username from localStorage
@@ -64,45 +64,67 @@ const ChatroomPage = () => {
     };
   }, [lobbyId, username]);
 
-  // 5. Timer Effect
-  useEffect(() => {
-    if (!isRunning || isRestarting) return;
+   /** 5. Listen for Server Timer & Phase Updates */
+   useEffect(() => {
+    if (!socket || !lobbyId) return;
 
-    const timer = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev === 1) { // Use 1 instead of 0 to prevent double triggers
-          clearInterval(timer);
+    const handlePhaseChange = ({ phase, timer }) => {
+      setIsNightMode(phase === "night");
+      setSeconds(timer); // Update timer from server
+    };
 
-          if (isNightMode) {
-            setIsNightMode(false);
-            socket.emit("dayTime", { lobbyId, isCreator });
-            socket.off("dayTime", { lobbyId, isCreator });
-            // setIsChanged(true);
-          }
-          else {
-            setIsNightMode(true);
-            socket.emit("nightTime", { lobbyId, isCreator });
-            socket.off("nightTime", { lobbyId, isCreator });
-            // setIsChanged(true);
-          }
+    const handleTimerUpdate = ({ timer }) => {
+      setSeconds(timer);
+    };
 
-          setTimeout(() => {
-            setSeconds(10); // Restart timer (change to 60 in actual game)
-            setIsRestarting(true);
-          }, 1000); // 1 sec before restarting
-
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    socket.on("phaseChange", handlePhaseChange);
+    socket.on("timerUpdate", handleTimerUpdate);
 
     return () => {
-      socket.off("nightTime", { lobbyId, isCreator }); // Remove nightTime listener
-      socket.off("dayTime", { lobbyId, isCreator }); // Remove dayTime listener
-      clearInterval(timer); // Clear interval when the component is unmounted or timer stops
+      socket.off("phaseChange", handlePhaseChange);
+      socket.off("timerUpdate", handleTimerUpdate);
     };
-  }, [isRunning, isRestarting, isCreator, socket, lobbyId]);
+  }, [lobbyId]);
+
+  // 5. Timer Effect
+    // useEffect(() => {
+    //   if (!isRunning || isRestarting) return;
+
+    //   const timer = setInterval(() => {
+    //     setSeconds((prev) => {
+    //       if (prev === 1) { // Use 1 instead of 0 to prevent double triggers
+    //         clearInterval(timer);
+
+    //         if (isNightMode) {
+    //           setIsNightMode(false);
+    //           socket.emit("dayTime", { lobbyId, isCreator });
+    //           socket.off("dayTime", { lobbyId, isCreator });
+    //           // setIsChanged(true);
+    //         }
+    //         else {
+    //           setIsNightMode(true);
+    //           socket.emit("nightTime", { lobbyId, isCreator });
+    //           socket.off("nightTime", { lobbyId, isCreator });
+    //           // setIsChanged(true);
+    //         }
+
+    //         setTimeout(() => {
+    //           setSeconds(10); // Restart timer (change to 60 in actual game)
+    //           setIsRestarting(true);
+    //         }, 1000); // 1 sec before restarting
+
+    //         return 0;
+    //       }
+    //       return prev - 1;
+    //     });
+    //   }, 1000);
+
+    //   return () => {
+    //     socket.off("nightTime", { lobbyId, isCreator }); // Remove nightTime listener
+    //     socket.off("dayTime", { lobbyId, isCreator }); // Remove dayTime listener
+    //     clearInterval(timer); // Clear interval when the component is unmounted or timer stops
+    //   };
+    // }, [isRunning, isRestarting, isCreator, socket, lobbyId]);
 
   // useEffect(() => {
   //   if (!isRunning || isRestarting) return;
@@ -204,20 +226,35 @@ const ChatroomPage = () => {
       </div>
 
       {/* Input Container */}
-      <div className={`chatroom-input-container ${isNightMode ? 'hidden' : ''}`}>
-        <textarea
-          className="chatroom-input"
-          rows="2"
-          placeholder="Type your message..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyPress}
-        />
-        <button className={`chatroom-send-button ${isNightMode ? "chatroom-send-button-night" : ""}`}  onClick={handleSendMessage}>
-          Send
-        </button>
-      </div>
+
+      {!isNightMode && (
+        <div className="chatroom-input-container">
+          <textarea
+            className="chatroom-input"
+            rows="2"
+            placeholder="Type your message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+          />
+          <button className="chatroom-send-button" onClick={handleSendMessage}>Send</button>
+        </div>
+      )}
     </div>
+      //   /{/* <div className={`chatroom-input-container ${isNightMode ? 'hidden' : ''}`}>
+      //     <textarea
+      //       className="chatroom-input"
+      //       rows="2"
+      //       placeholder="Type your message..."
+      //       value={message}
+      //       onChange={(e) => setMessage(e.target.value)}
+      //       onKeyDown={handleKeyPress}
+      //     />
+      //     <button className={`chatroom-send-button ${isNightMode ? "chatroom-send-button-night" : ""}`}  onClick={handleSendMessage}>
+      //       Send
+      //     </button>
+      //   </div>
+      // </div> */}
   );
 };
 
