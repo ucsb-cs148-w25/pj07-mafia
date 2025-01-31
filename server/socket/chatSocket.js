@@ -9,6 +9,7 @@ Broadcast messages to all users in a chatroom.
 Notify when users join or leave the chat.
 */
 const lobbyService = require('../services/lobbyService');
+const votingService = require('../services/votingService');
 
 function initChatSocket(io) {
   io.on('connection', (socket) => {
@@ -57,6 +58,7 @@ function initChatSocket(io) {
           });
         }
       }
+      socket.emit('playerUpdated', { player })
     });
 
     socket.on('requestRole', ({ lobbyId }) => {
@@ -141,7 +143,77 @@ function initChatSocket(io) {
      */
     socket.on('disconnect', () => {
       console.log('User disconnected from chatroom:', socket.id);
+    
+      // Retrieve the lobbyId that was stored on this socket
+      const lobbyId = socket.lobbyId;
+      if (!lobbyId) {
+        // We don't know which lobby the user was in, so just return
+        console.log('No lobbyId found for disconnecting socket.');
+        return;
+      }
+    
+      // Now fetch the lobby
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (!lobby) {
+        console.log('Lobby not found or already removed.');
+        return;
+      }
+    
+      // Find the player in that lobby who matches our socket
+      let disconnectedPlayer = lobby.players.find((p) => p.socketId === socket.id);
+      if (!disconnectedPlayer) {
+        console.log('Could not find a matching player in the lobby.');
+        return;
+      }
+    
+      // Mark them dead, remove them, etc.
+      disconnectedPlayer.isAlive = false;
+    
+      // Now broadcast (or update) to everyone in the lobby
+      // If you want ALL connected clients to see it:
+      io.to(lobbyId).emit('updateAllPlayers', { players: lobby.players });
     });
+    
+
+    socket.on('dayPhase', () => {
+      const lobbyId = socket.lobbyId;
+      const lobby = lobbyService.getLobby(lobbyId);
+      for (let i = 0; i < lobby.players.length; i++) {
+        if(lobby.players[i].vote != '') {
+          votee = lobby.players.find((p) => p.socketId === lobby.players[i].vote);
+          votee.voteCount++;
+        }
+      }
+      let max = -1;
+      let votedPlayer = null;
+      for (let i = 0; i < lobby.players.length; i++) {
+        if(lobby.players[i].voteCount > max){
+          max = lobby.players[i].voteCount;
+          votedPlayer = lobby.players[i];
+        }
+      }
+
+      votedPlayer.isAlive = false;
+
+      for (let i = 0; i < lobby.players.length; i++) {
+        let player = lobby.players[i];
+        player.vote = '';
+        player.voteCount = 0;
+      }
+
+      socket.emit('updateAllPlayers', { players: lobby.players })
+    });
+
+    socket.on('nightPhase', () => {
+      const lobbyId = socket.lobbyId;
+      io.to(lobbyId).emit('startVoting', {});
+    });
+
+    socket.on('voteCast',({lobbyId, voteId}) => {
+        votingService.castVote(socket.id, voteId);
+        console.log(socket.Id, ' casted a vote for:', voteId);
+    });
+
   });
 }
 

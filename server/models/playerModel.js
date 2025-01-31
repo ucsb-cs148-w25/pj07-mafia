@@ -13,6 +13,8 @@ class Player {
     this.username = username;
     this.role = role; // Add role property
     this.isAlive = true; // Optional: Track player status
+    this.vote = '';
+    this.voteCount = 0;
   }
 }
 
