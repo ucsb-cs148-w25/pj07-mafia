@@ -111,6 +111,16 @@ function initChatSocket(io) {
     socket.on('disconnect', () => {
       console.log('User disconnected from chatroom:', socket.id);
     });
+
+    socket.on('castVote', (socketId) => {
+      //cast the vote
+    });
+
+    socket.on('isDay', () => {
+      //count the votes
+      //emit the person with the most votes
+    });
+
   });
 }
 
