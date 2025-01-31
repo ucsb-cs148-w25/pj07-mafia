@@ -9,7 +9,6 @@ Configure the server (e.g., port, middleware).
 Initialize socket.io for real-time communication.
 Attach controllers and sockets to handle application logic.
 */
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');

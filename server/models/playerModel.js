@@ -8,11 +8,10 @@ Store player details (e.g., username, socket ID, role).
 Associate players with specific lobbies.
 */
 class Player {
-  constructor(socketId, username, role = null) {
+  constructor(socketId, username) {
     this.socketId = socketId;
     this.username = username;
-    this.role = role; // Add role property
-    this.isAlive = true; // Optional: Track player status
+    // Potentially more fields, like role, isAlive, etc.
   }
 }
 
