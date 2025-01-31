@@ -9,6 +9,7 @@ Broadcast lobby status to all players in the room.
 Check if the lobby meets the requirements to start a game.
 */
 const lobbyService = require('../services/lobbyService');
+const roleService = require('../services/roleService');
 
 function initLobbySocket(io) {
   io.on('connection', (socket) => {
@@ -59,14 +60,26 @@ function initLobbySocket(io) {
     socket.on('startGame', (lobbyId) => {
       try {
         lobbyService.startGame(lobbyId, socket.id);
-
-        // Notify all in lobby
-        io.to(lobbyId).emit('startChatroom', {
-          message: 'Game is starting!',
-          lobbyId, // So clients can route themselves
+        roleService.assignRoles(lobbyId); // Assign roles
+        const lobby = lobbyService.getLobby(lobbyId);
+    
+        // Notify all players game is starting
+        io.to(lobbyId).emit('startChatroom', { lobbyId });
+    
+        // Send private role assignments
+        lobby.players.forEach(player => {
+          console.log(`Attempting to send role to ${player.socketId}`);
+          io.to(player.socketId).emit('roleAssigned', {
+            role: player.role,
+            players: lobby.players.map(p => ({
+              id: p.socketId,
+              name: p.username,
+              isAlive: p.isAlive
+            }))
+          });
+          console.log(`Should have sent role ${player.role} to ${player.username}`);
         });
-
-        console.log(`Game started for lobby: ${lobbyId}`);
+    
       } catch (error) {
         socket.emit('lobbyError', { message: error.message });
       }

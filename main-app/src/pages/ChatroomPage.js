@@ -10,111 +10,205 @@ const ChatroomPage = () => {
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
   const messagesEndRef = useRef(null);
+  const [role, setRole] = useState(null);
+  const [socketStatus, setSocketStatus] = useState(socket.connected ? "connected" : "disconnected");
 
-  // 1. Retrieve username from localStorage
+  // Debugging logger
+  const debugLog = (message, data = null) => {
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[${timestamp}] ${message}`, data);
+  };
+
+  // 1. Retrieve username and initialize socket monitoring
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
     if (storedUsername) {
       setUsername(storedUsername);
+      debugLog("Username loaded from storage:", storedUsername);
     } else {
-      // If no username was found in localStorage, redirect to home
       navigate("/");
     }
+
+    // If the socket is already connected, update the status
+    if (socket.connected) {
+      setSocketStatus("connected");
+      debugLog("Socket already connected", socket.id);
+    }
+
+    // Socket connection monitoring
+    const handleConnect = () => {
+      debugLog("Socket connected", socket.id);
+      setSocketStatus("connected");
+    };
+
+    const handleDisconnect = () => {
+      debugLog("Socket disconnected");
+      setSocketStatus("disconnected");
+    };
+
+    const handleConnectError = (err) => {
+      debugLog("Socket connection error:", err.message);
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+    };
   }, [navigate]);
 
-  // 2. Scroll to latest message
+  // 2. Role assignment handler (fixed dependency array)
+  useEffect(() => {
+    debugLog("Initializing role assignment listener");
+    
+    const handleRoleAssignment = (data) => {
+      debugLog("ROLE ASSIGNMENT RECEIVED", {
+        receivedRole: data.role,
+        fullPayload: data,
+        currentSocket: socket.id,
+        connectionStatus: socket.connected
+      });
+      setRole(data.role);
+    };
+
+    socket.on("roleAssigned", handleRoleAssignment);
+
+    return () => {
+      debugLog("Cleaning up role assignment listener");
+      socket.off("roleAssigned", handleRoleAssignment);
+    };
+  }, []); // Removed socket from dependencies
+
+  // 3. Message handling and scrolling
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 3. Handle incoming messages and socket events
+  // 4. Chat message handling
   useEffect(() => {
-    if (!socket) return;
-
-    function handleMessage(newMessage) {
+    debugLog("Initializing message handlers");
+    
+    const handleMessage = (newMessage) => {
       setMessages((prev) => [...prev, newMessage]);
-    }
+      debugLog("New message received", newMessage);
+    };
 
-    function handleLobbyError(err) {
+    const handleLobbyError = (err) => {
+      debugLog("Lobby error", err.message);
       alert(err.message);
       navigate("/");
-    }
+    };
 
     socket.on("message", handleMessage);
     socket.on("lobbyError", handleLobbyError);
 
     return () => {
+      debugLog("Cleaning up message handlers");
       socket.off("message", handleMessage);
       socket.off("lobbyError", handleLobbyError);
     };
   }, [navigate]);
 
-  // 4. Join the chatroom
+  // 5. Chatroom joining/leaving with connection verification
   useEffect(() => {
     if (!socket || !lobbyId || !username) return;
 
-    socket.emit("joinChatroom", { lobbyId, username });
+    debugLog("Attempting to join chatroom", {
+      lobbyId,
+      username,
+      socketConnected: socket.connected,
+      socketId: socket.id
+    });
 
-    // If this component unmounts, leave the chatroom
+    const joinTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        debugLog("Join timeout - socket not connected");
+        alert("Connection timeout. Please refresh the page.");
+      }
+    }, 5000);
+
+    socket.emit("joinChatroom", { lobbyId, username }, (response) => {
+      clearTimeout(joinTimeout);
+      if (response?.error) {
+        debugLog("Join error", response.error);
+        alert(response.error);
+      } else {
+        // After successfully joining the chatroom, request the role
+        debugLog("Successfully joined chatroom. Requesting role...");
+        socket.emit("requestRole", { lobbyId });
+      }
+    });
+
     return () => {
+      debugLog("Leaving chatroom");
       socket.emit("leaveChatroom", { lobbyId, username });
     };
   }, [lobbyId, username]);
 
-  // 5. Handle sending a message
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      // We ONLY send lobbyId and text.
-      // The server (chatSocket.js) will override "sender" and "timestamp"
-      socket.emit("sendMessage", {
+// 6. Message sending with delivery confirmation (updated)
+const handleSendMessage = () => {
+  const trimmedMessage = message.trim();
+  if (trimmedMessage) {
+    // Clear input immediately
+    setMessage("");
+    
+    debugLog("Sending message", { message: trimmedMessage, lobbyId });
+    socket.emit(
+      "sendMessage",
+      {
         lobbyId,
-        text: message.trim(),
-      });
-      setMessage("");
-    }
-  };
+        text: trimmedMessage
+      },
+      (deliveryConfirmation) => {
+        if (deliveryConfirmation?.error) {
+          debugLog("Message delivery failed", deliveryConfirmation.error);
+          // Optional: Re-add message to input if failed
+          // setMessage(trimmedMessage);
+        } else {
+          debugLog("Message delivered successfully");
+        }
+      }
+    );
+  }
+};
 
-  // 6. Handle "Enter" key press
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // 7. Go back to home
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-
+  // 7. UI components with connection status display
   return (
     <div className="chatroom-container">
-      {/* Header */}
+      {/* <div className="connection-status">
+        Connection: {socketStatus} | Socket ID: {socket.connected ? socket.id : "N/A"}
+      </div> */}
+      
       <div className="chatroom-header">
         <h2>Chatroom</h2>
-        <button className="back-button" onClick={handleBackToHome}>
+        <button className="back-button" onClick={() => navigate("/")}>
           Back to Home
         </button>
       </div>
 
-      {/* Messages Display */}
+      {role && (
+        <div className={`role-banner ${role.toLowerCase() === 'mafia' ? 'mafia' : ''}`}>
+          Your Role: <span className="role-name">{role}</span>
+        </div>
+      )}
+
       <div className="chatroom-messages">
         {messages.map((msg, idx) => (
           <div key={idx} className="chatroom-message">
             <span className="chatroom-timestamp">
-              {new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>{" "}
-            <span className="chatroom-username">{msg.sender}:</span>{" "}
+              {new Date(msg.timestamp).toLocaleTimeString()}
+            </span>
+            <span className="chatroom-username">{msg.sender}: </span>
             <span className="chatroom-text">{msg.text}</span>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Container */}
       <div className="chatroom-input-container">
         <textarea
           className="chatroom-input"
@@ -122,7 +216,12 @@ const ChatroomPage = () => {
           placeholder="Type your message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyPress}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault(); // Prevent default form behavior
+              handleSendMessage();
+            }
+          }}
         />
         <button className="chatroom-send-button" onClick={handleSendMessage}>
           Send
