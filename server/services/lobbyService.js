@@ -15,9 +15,18 @@ const Player = require('../models/playerModel');
 const MIN_PLAYERS = 6;
 const MAX_PLAYERS = 20;
 
+const DAY_DURATION = 120;
+const NIGHT_DURATION = 60;
+const VOTING_DURATION = 30;
+
 // In-memory dictionary of all lobbies, keyed by lobbyId.
 // In a production app, you'd likely store this in a database.
 const lobbies = {};
+let io = null;
+
+function initialize(socketIO) {
+  io = socketIO;
+}
 
 /**
  * Helper method to retrieve a lobby from our in-memory storage.
@@ -134,8 +143,41 @@ function startGame(lobbyId, socketId) {
 
   // Mark the lobby as started
   lobby.hasStarted = true;
+  lobby.phase = "day";
+
 }
 
+function startTimer(lobbyId, duration) {
+  if (!lobbies[lobbyId]) {
+    lobbies[lobbyId] = { timeLeft: duration, timer: null };
+  }
+
+  const lobby = lobbies[lobbyId];
+
+  if (lobby.timer) clearInterval(lobby.timer); // Reset existing timer
+
+  lobby.timer = setInterval(() => {
+    if (lobby.timeLeft <= 0) {
+      clearInterval(lobby.timer);
+      lobby.timer = null;
+      console.log(`Timer for lobby ${lobbyId} ended. Restarting...`);
+
+      // Restart the timer automatically
+      setTimeout(() => {
+        lobby.timeLeft = duration;
+        startTimer(lobbyId, duration);
+      }, 0);
+    } else {
+      lobby.timeLeft--;
+    }
+
+    // Broadcast time left to all players in the chatroom
+    io.to(lobbyId).emit("timerUpdate", { timeLeft: lobby.timeLeft });
+
+  }, 1000);
+
+  return { startTimer };
+}
 /**
  * Remove a disconnected player from a lobby.
  * If that player was the creator, reassign or delete the lobby.
@@ -192,10 +234,12 @@ function removePlayer(socketId) {
 }
 
 module.exports = {
+  initialize,
   getLobby,
   createLobby,
   joinLobby,
   canStart,
   startGame,
+  startTimer,
   removePlayer,
 };

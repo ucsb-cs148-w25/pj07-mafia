@@ -19,43 +19,52 @@ function initChatSocket(io) {
      * The client calls: socket.emit("joinChatroom", { lobbyId, username });
      * We do keep track of them in the same room as the lobby, but for chat.
      */
-    socket.on('joinChatroom', ({ lobbyId, username }) => {
-      // The server can still store them in the same "room"
-      // (They should already be in that room from the lobbySocket, but this is optional.)
+    socket.on("joinChatroom", ({ lobbyId, username }) => {
       socket.join(lobbyId);
-
-      // For debugging: Check if we actually have a valid lobby
+    
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
         console.log(`joinChatroom: Lobby ${lobbyId} does NOT exist.`);
-        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
+        return socket.emit("lobbyError", { message: "Lobby does not exist." });
       }
-      // Check if the player is in that lobby
+    
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
         console.log(`joinChatroom: Player with socketId ${socket.id} not found in Lobby ${lobbyId}.`);
-        // This might happen if the user never joined the lobby or there's a mismatch
-        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
+        return socket.emit("lobbyError", { message: "You are not in this lobby." });
       }
-
-      // Log who is actually joining
+    
       console.log(`joinChatroom: Player ${player.username} (Socket: ${socket.id}) joined chat in Lobby ${lobbyId}.`);
-
-      // Optionally broadcast that a user joined
-      socket.to(lobbyId).emit('message', {
+    
+      socket.to(lobbyId).emit("message", {
         text: `${player.username} has joined the chat.`,
-        sender: 'System',
+        sender: "System",
         timestamp: new Date(),
       });
-      if (lobby.hasStarted) {
-        const player = lobby.players.find((p) => p.socketId === socket.id);
-        if (player && player.role) {
-          // Re-send the role
-          socket.emit('roleAssigned', {
-            role: player.role,
-            // Include anything else relevant to the player
-          });
-        }
+    
+      // Start or resume the timer
+      if (!lobby.timer) {
+        console.log(`phase:`);
+        // if (lobbyService.phase === "day") {
+        //   lobbyService.startTimer(lobbyId, 120);
+        //   lobbyService.phase = "voting";
+        // }
+        // else if (lobbyService.phase == "voting") {
+        //   lobbyService.startTimer(lobbyId, 30);
+        //   lobbyService.phase = "night";
+        // }
+        // else if (lobbyService.phase == "night") {
+        //   lobbyService.startTimer(lobbyId, 60);
+        //   lobbyService.phase = "day";
+        // }
+
+        lobbyService.startTimer(lobbyId, 3);
+      } else {
+        socket.emit("timerUpdate", { timeLeft: lobby.timeLeft });
+      }
+    
+      if (lobby.hasStarted && player.role) {
+        socket.emit("roleAssigned", { role: player.role });
       }
     });
 

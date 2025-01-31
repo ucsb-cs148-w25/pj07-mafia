@@ -33,6 +33,13 @@
   background-color: #003f8c;
 }
 
+.timer-display {
+  position: absolute;
+  top: 47px;
+  right: 50px;
+  font-size: 1.75rem;
+}
+
 /* Messages container */
 .chatroom-messages {
   flex: 1;

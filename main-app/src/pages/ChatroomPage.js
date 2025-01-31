@@ -12,6 +12,7 @@ const ChatroomPage = () => {
   const messagesEndRef = useRef(null);
   const [role, setRole] = useState(null);
   const [socketStatus, setSocketStatus] = useState(socket.connected ? "connected" : "disconnected");
+  const [timeLeft, setTimeLeft] = useState(null);
 
   // Debugging logger
   const debugLog = (message, data = null) => {
@@ -149,6 +150,21 @@ const ChatroomPage = () => {
     };
   }, [lobbyId, username]);
 
+
+// Handle timer update
+  useEffect(() => {
+    const handleTimerUpdate = ({ timeLeft }) => {
+      debugLog("Timer updated", timeLeft);
+      setTimeLeft(timeLeft);
+    };
+
+    socket.on("timerUpdate", handleTimerUpdate);
+
+    return () => {
+      socket.off("timerUpdate", handleTimerUpdate);
+    };
+  }, []);
+
 // 6. Message sending with delivery confirmation (updated)
 const handleSendMessage = () => {
   const trimmedMessage = message.trim();
@@ -188,6 +204,11 @@ const handleSendMessage = () => {
         <button className="back-button" onClick={() => navigate("/")}>
           Back to Home
         </button>
+        {timeLeft !== null && (
+          <div className="timer-display">
+            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+          </div>
+        )}
       </div>
 
       {role && (

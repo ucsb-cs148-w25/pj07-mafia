@@ -12,6 +12,8 @@ const lobbyService = require('../services/lobbyService');
 const roleService = require('../services/roleService');
 
 function initLobbySocket(io) {
+  lobbyService.initialize(io);
+  
   io.on('connection', (socket) => {
     console.log('New client connected for LOBBY:', socket.id);
 
