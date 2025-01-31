@@ -51,6 +51,10 @@ This plan will evolve as we progress and identify additional learning needs. Tog
 ## Comments on Help Channel:
 
 Andy - https://ucsb-cs148-w25.slack.com/archives/C088GMZRF0A/p1738360955409199
+
+
 Tyler - https://ucsb-cs148-w25.slack.com/archives/C088GMZRF0A/p1738308203087619
+
+
 Victor - https://ucsb-cs148-w25.slack.com/archives/C088GMZRF0A/p1738295925654899
 
