@@ -1,33 +1,38 @@
+/*
+ votingSocket.js
+ Listens for "start_vote" and "submit_vote" from the client. 
+ Uses VotingService to handle the logic, then broadcasts events to the lobby.
+*/
 const VotingService = require("../services/votingService");
 
 function initVotingSocket(io) {
   io.on("connection", (socket) => {
     console.log(`[VOTING SOCKET] ${socket.id} connected.`);
 
+    // Start a vote
     socket.on("start_vote", ({ lobbyId, voteType }) => {
       console.log(`[VOTING] Vote started for ${voteType} in lobby ${lobbyId}`);
-
       const voteId = VotingService.startVoting(lobbyId, voteType);
+
       if (!voteId) {
-        console.warn(`[VOTING] Failed to start voting session for lobby ${lobbyId}`);
+        console.warn(`[VOTING] Failed to start voting for ${lobbyId}.`);
         return;
       }
 
       const votingSessions = VotingService.getVotingSessions(lobbyId);
-      if (!votingSessions || votingSessions.length === 0) {
-        console.warn(`[VOTING] No active voting session found for lobby ${lobbyId}`);
+      if (!votingSessions.length) {
+        console.warn(`[VOTING] No sessions found after starting voting in ${lobbyId}.`);
         return;
       }
 
-      const latestSession = votingSessions[votingSessions.length - 1];
-      // Emit the voting popup to everyone in the lobby.
+      const latest = votingSessions[votingSessions.length - 1];
       io.to(lobbyId).emit("open_voting", {
         voteType,
         voteId,
-        players: Array.from(latestSession.players)
+        players: Array.from(latest.players),
       });
 
-      // Set a 30-second timeout to force end the voting session
+      // Optional 30s timer to auto-end
       setTimeout(() => {
         const session = VotingService.getSession(lobbyId, voteId);
         if (session) {
@@ -35,41 +40,43 @@ function initVotingSocket(io) {
           const eliminatedPlayer = VotingService.endVoting(lobbyId, voteId);
           io.to(lobbyId).emit("voting_complete", { eliminated: eliminatedPlayer });
           if (eliminatedPlayer) {
-            io.to(lobbyId).emit("chatMessage", {
+            io.to(lobbyId).emit("message", {
               sender: "System",
-              text: `Player ${eliminatedPlayer} has been eliminated!`
+              text: `Player ${eliminatedPlayer} was eliminated!`,
+              timestamp: new Date()
             });
           }
         }
       }, 30000);
     });
 
+    // Submit a vote
     socket.on("submit_vote", ({ lobbyId, voteId, voter, target }) => {
-      // Guard: if any required data is missing, log and ignore.
       if (!lobbyId || !voteId || !voter || !target) {
-        console.warn(
-          `[VOTING] Incomplete vote submission received: lobbyId=${lobbyId}, voteId=${voteId}, voter=${voter}, target=${target}`
-        );
+        console.warn("[VOTING] Incomplete vote submission.");
         return;
       }
+
       VotingService.castVote(lobbyId, voteId, voter, target);
 
-      // After casting the vote, check if all expected votes have been submitted.
       const session = VotingService.getSession(lobbyId, voteId);
       if (session && Object.keys(session.votes).length === session.players.size) {
-        const eliminatedPlayer = VotingService.endVoting(lobbyId, voteId);
-        io.to(lobbyId).emit("voting_complete", { eliminated: eliminatedPlayer });
-        if (eliminatedPlayer) {
-          io.to(lobbyId).emit("chatMessage", {
+        // Everyone has voted
+        const eliminated = VotingService.endVoting(lobbyId, voteId);
+        io.to(lobbyId).emit("voting_complete", { eliminated });
+
+        if (eliminated) {
+          io.to(lobbyId).emit("message", {
             sender: "System",
-            text: `Player ${eliminatedPlayer} has been eliminated!`
+            text: `Player ${eliminated} was eliminated by majority vote!`,
+            timestamp: new Date()
           });
         }
       }
     });
 
     socket.on("disconnect", () => {
-      console.log(`[SOCKET] ${socket.id} disconnected.`);
+      console.log(`[VOTING SOCKET] ${socket.id} disconnected.`);
     });
   });
 }
