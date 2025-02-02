@@ -95,4 +95,26 @@ function assignRoles(lobbyId) {
   });
 }
 
-module.exports = { assignRoles };
+  /**
+ * Retrieves the role of a given player in a specific lobby.
+ * @param {string} username - The username of the player
+ * @param {string} lobbyId - The lobby where the player is playing
+ * @returns {string|null} - The player's role (e.g., "Mafia", "Villager") or null if not found
+ */
+  function getRole(username, lobbyId) {
+    const lobby = getLobby(lobbyId);
+    if (!lobby) {
+        console.warn(`[ROLE SERVICE] Lobby not found: ${lobbyId}`);
+        return null;
+    }
+  
+    const player = lobby.players.find((p) => p.username === username);
+    if (!player) {
+        console.warn(`[ROLE SERVICE] Player ${username} not found in lobby ${lobbyId}`);
+        return null;
+    }
+  
+    return player.role;
+  }
+
+module.exports = { assignRoles, getRole };

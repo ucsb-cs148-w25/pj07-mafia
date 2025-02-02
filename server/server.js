@@ -17,6 +17,7 @@ const { Server } = require('socket.io');
 // Socket initializers
 const { initLobbySocket } = require('./socket/lobbySocket');
 const { initChatSocket } = require('./socket/chatSocket');
+const { initVotingSocket } = require('./socket/votingSocket');
 
 // (Optional) Express-based Controllers
 const lobbyController = require('./controllers/lobbyController');
@@ -45,6 +46,7 @@ const io = new Server(server, {
 // Attach Socket Listeners
 initLobbySocket(io);
 initChatSocket(io);
+initVotingSocket(io); 
 
 // Start the Server
 const PORT = 4000;
