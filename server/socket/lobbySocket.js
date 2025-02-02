@@ -13,7 +13,7 @@ const roleService = require('../services/roleService');
 
 function initLobbySocket(io) {
   lobbyService.initialize(io);
-  
+
   io.on('connection', (socket) => {
     console.log('New client connected for LOBBY:', socket.id);
 
@@ -62,6 +62,7 @@ function initLobbySocket(io) {
     socket.on('startGame', (lobbyId) => {
       try {
         lobbyService.startGame(lobbyId, socket.id);
+        lobbyService.startTimer(lobbyId, 120);
         roleService.assignRoles(lobbyId); // Assign roles
         const lobby = lobbyService.getLobby(lobbyId);
     

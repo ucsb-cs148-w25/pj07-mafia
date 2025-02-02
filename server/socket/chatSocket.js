@@ -43,6 +43,15 @@ function initChatSocket(io) {
       });
     
       // Start or resume the timer
+    
+      if (lobby.hasStarted && player.role) {
+        socket.emit("roleAssigned", { role: player.role });
+      }
+    });
+
+    socket.on('timerUpdate', ({ lobbyId }) => {
+      const lobby = lobbyService.getLobby(lobbyId);
+
       if (!lobby.timer) {
         console.log(`phase:`);
         // if (lobbyService.phase === "day") {
@@ -60,11 +69,7 @@ function initChatSocket(io) {
 
         lobbyService.startTimer(lobbyId, 3);
       } else {
-        socket.emit("timerUpdate", { timeLeft: lobby.timeLeft });
-      }
-    
-      if (lobby.hasStarted && player.role) {
-        socket.emit("roleAssigned", { role: player.role });
+        socket.emit("currentTime", { timeLeft: lobby.timeLeft });
       }
     });
 

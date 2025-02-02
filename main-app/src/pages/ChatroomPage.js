@@ -152,18 +152,50 @@ const ChatroomPage = () => {
 
 
 // Handle timer update
+  // useEffect(() => {
+  //   const handleTimerUpdate = ({ timeLeft }) => {
+  //     debugLog("Timer updated", timeLeft);
+  //     setTimeLeft(timeLeft);
+  //   };
+
+  //   socket.on("timerUpdate", handleTimerUpdate);
+
+  //   return () => {
+  //     socket.off("timerUpdate", handleTimerUpdate);
+  //   };
+  // }, []);
+
   useEffect(() => {
-    const handleTimerUpdate = ({ timeLeft }) => {
-      debugLog("Timer updated", timeLeft);
-      setTimeLeft(timeLeft);
+    // Listen for timer updates
+
+    const handleTimeUpdate = (data) => {
+      setTimeLeft(data.timeLeft);
     };
 
-    socket.on("timerUpdate", handleTimerUpdate);
+    socket.emit("timerUpdate", { lobbyId });
+    socket.on("currentTime", handleTimeUpdate);
 
+    // socket.on("currentTime", ({ timeLeft }) => {
+    //   setTimeLeft(timeLeft);
+    // });
+
+    // socket.on("timerEnded", ({ message }) => {
+    //   console.log(message);
+    // });
+
+    // Cleanup listener
     return () => {
-      socket.off("timerUpdate", handleTimerUpdate);
+      socket.off("currentTime");
+      // socket.off("timerEnded");
     };
   }, []);
+
+  // Convert seconds to minutes:seconds format
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
 
 // 6. Message sending with delivery confirmation (updated)
 const handleSendMessage = () => {
@@ -204,11 +236,7 @@ const handleSendMessage = () => {
         <button className="back-button" onClick={() => navigate("/")}>
           Back to Home
         </button>
-        {timeLeft !== null && (
-          <div className="timer-display">
-            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
-          </div>
-        )}
+        {timeLeft !== null && <div className="timer-display">{formatTime(timeLeft)}</div>}
       </div>
 
       {role && (

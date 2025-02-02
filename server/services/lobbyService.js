@@ -172,7 +172,7 @@ function startTimer(lobbyId, duration) {
     }
 
     // Broadcast time left to all players in the chatroom
-    io.to(lobbyId).emit("timerUpdate", { timeLeft: lobby.timeLeft });
+    io.to(lobbyId).emit("timerUpdate", {});
 
   }, 1000);
 
