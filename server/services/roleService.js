@@ -117,4 +117,4 @@ function assignRoles(lobbyId) {
     return player.role;
   }
 
-module.exports = { assignRoles, getRole };
+module.exports = { assignRoles, getRole };module.exports = { assignRoles };
