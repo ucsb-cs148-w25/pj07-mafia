@@ -144,40 +144,63 @@ function startGame(lobbyId, socketId) {
   // Mark the lobby as started
   lobby.hasStarted = true;
   lobby.phase = "day";
-
 }
 
-function startTimer(lobbyId, duration) {
-  if (!lobbies[lobbyId]) {
-    lobbies[lobbyId] = { timeLeft: duration, timer: null };
+/**
+ * startDayNightCycle
+ *  - Sets the timeLeft based on the current lobby.phase,
+ *  - Starts an interval,
+ *  - Counts down until timeLeft <= 0,
+ *  - Toggles the phase and calls itself again.
+ */
+function startDayNightCycle(lobbyId) {
+  const lobby = lobbies[lobbyId];
+  if (!lobby) return;
+
+  // Decide the duration based on the current phase
+  let duration = 0;
+  if (lobby.phase === "day") {
+    duration = DAY_DURATION;
+  } else if (lobby.phase === "night") {
+    duration = NIGHT_DURATION;
   }
 
-  const lobby = lobbies[lobbyId];
+  // Set the lobby's timeLeft
+  lobby.timeLeft = duration;
 
-  if (lobby.timer) clearInterval(lobby.timer); // Reset existing timer
+  // Clear existing interval if any
+  if (lobby.timer) {
+    clearInterval(lobby.timer);
+  }
 
+  // Create a new timer
   lobby.timer = setInterval(() => {
+    lobby.timeLeft--;
+
+    // Broadcast the current phase & time
+    io.to(lobbyId).emit("phaseUpdate", {
+      phase: lobby.phase,
+      timeLeft: lobby.timeLeft,
+    });
+
+    // Check if phase ended
     if (lobby.timeLeft <= 0) {
       clearInterval(lobby.timer);
       lobby.timer = null;
-      console.log(`Timer for lobby ${lobbyId} ended. Restarting...`);
 
-      // Restart the timer automatically
-      setTimeout(() => {
-        lobby.timeLeft = duration;
-        startTimer(lobbyId, duration);
-      }, 0);
-    } else {
-      lobby.timeLeft--;
+      // Toggle the phase
+      if (lobby.phase === "day") {
+        lobby.phase = "night";
+      } else {
+        lobby.phase = "day";
+      }
+
+      // Start the next phase cycle
+      startDayNightCycle(lobbyId);
     }
-
-    // Broadcast time left to all players in the chatroom
-    io.to(lobbyId).emit("timerUpdate", {});
-
   }, 1000);
-
-  return { startTimer };
 }
+
 /**
  * Remove a disconnected player from a lobby.
  * If that player was the creator, reassign or delete the lobby.
@@ -240,6 +263,6 @@ module.exports = {
   joinLobby,
   canStart,
   startGame,
-  startTimer,
+  startDayNightCycle,
   removePlayer,
 };

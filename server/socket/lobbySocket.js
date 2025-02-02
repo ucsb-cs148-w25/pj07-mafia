@@ -12,6 +12,7 @@ const lobbyService = require('../services/lobbyService');
 const roleService = require('../services/roleService');
 
 function initLobbySocket(io) {
+  // Initialize the lobbyService with the Socket.IO instance
   lobbyService.initialize(io);
 
   io.on('connection', (socket) => {
@@ -61,17 +62,22 @@ function initLobbySocket(io) {
     // 3. Start Game
     socket.on('startGame', (lobbyId) => {
       try {
+        // 1. Mark the game as started
         lobbyService.startGame(lobbyId, socket.id);
-        lobbyService.startTimer(lobbyId, 120);
-        roleService.assignRoles(lobbyId); // Assign roles
-        const lobby = lobbyService.getLobby(lobbyId);
-    
-        // Notify all players game is starting
+
+        // 2. Begin the Day/Night cycle
+        lobbyService.startDayNightCycle(lobbyId);
+
+        // 3. Assign roles
+        roleService.assignRoles(lobbyId);
+
+        // 4. Notify all players the chatroom can start
         io.to(lobbyId).emit('startChatroom', { lobbyId });
-    
-        // Send private role assignments
+
+        // 5. Send each player their role
+        const lobby = lobbyService.getLobby(lobbyId);
         lobby.players.forEach(player => {
-          console.log(`Attempting to send role to ${player.socketId}`);
+          console.log(`Sending role to ${player.socketId}: ${player.role}`);
           io.to(player.socketId).emit('roleAssigned', {
             role: player.role,
             players: lobby.players.map(p => ({
@@ -80,9 +86,8 @@ function initLobbySocket(io) {
               isAlive: p.isAlive
             }))
           });
-          console.log(`Should have sent role ${player.role} to ${player.username}`);
         });
-    
+
       } catch (error) {
         socket.emit('lobbyError', { message: error.message });
       }

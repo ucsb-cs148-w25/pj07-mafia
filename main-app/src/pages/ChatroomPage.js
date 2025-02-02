@@ -6,13 +6,18 @@ import "../styles/ChatroomPage.css";
 const ChatroomPage = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
+
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
   const messagesEndRef = useRef(null);
+
+  // Role-related
   const [role, setRole] = useState(null);
-  const [socketStatus, setSocketStatus] = useState(socket.connected ? "connected" : "disconnected");
-  const [timeLeft, setTimeLeft] = useState(null);
+
+  // Phase/time tracking
+  const [currentPhase, setCurrentPhase] = useState(""); 
+  const [timeLeft, setTimeLeft] = useState(0);
 
   // Debugging logger
   const debugLog = (message, data = null) => {
@@ -20,7 +25,7 @@ const ChatroomPage = () => {
     console.log(`[${timestamp}] ${message}`, data);
   };
 
-  // 1. Retrieve username and initialize socket monitoring
+  // 1. Load username, watch socket status
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
     if (storedUsername) {
@@ -29,75 +34,32 @@ const ChatroomPage = () => {
     } else {
       navigate("/");
     }
-
-    // If the socket is already connected, update the status
-    if (socket.connected) {
-      setSocketStatus("connected");
-      debugLog("Socket already connected", socket.id);
-    }
-
-    // Socket connection monitoring
-    const handleConnect = () => {
-      debugLog("Socket connected", socket.id);
-      setSocketStatus("connected");
-    };
-
-    const handleDisconnect = () => {
-      debugLog("Socket disconnected");
-      setSocketStatus("disconnected");
-    };
-
-    const handleConnectError = (err) => {
-      debugLog("Socket connection error:", err.message);
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleConnectError);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleConnectError);
-    };
   }, [navigate]);
 
-  // 2. Role assignment handler (fixed dependency array)
+  // 2. Handle role assignment
   useEffect(() => {
-    debugLog("Initializing role assignment listener");
-    
     const handleRoleAssignment = (data) => {
-      debugLog("ROLE ASSIGNMENT RECEIVED", {
-        receivedRole: data.role,
-        fullPayload: data,
-        currentSocket: socket.id,
-        connectionStatus: socket.connected
-      });
+      debugLog("ROLE ASSIGNMENT RECEIVED", data);
       setRole(data.role);
     };
-
     socket.on("roleAssigned", handleRoleAssignment);
 
     return () => {
-      debugLog("Cleaning up role assignment listener");
       socket.off("roleAssigned", handleRoleAssignment);
     };
-  }, []); // Removed socket from dependencies
+  }, []);
 
-  // 3. Message handling and scrolling
+  // 3. Messages: autoscroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 4. Chat message handling
+  // 4. Handle incoming chat messages
   useEffect(() => {
-    debugLog("Initializing message handlers");
-    
     const handleMessage = (newMessage) => {
       setMessages((prev) => [...prev, newMessage]);
       debugLog("New message received", newMessage);
     };
-
     const handleLobbyError = (err) => {
       debugLog("Lobby error", err.message);
       alert(err.message);
@@ -108,27 +70,21 @@ const ChatroomPage = () => {
     socket.on("lobbyError", handleLobbyError);
 
     return () => {
-      debugLog("Cleaning up message handlers");
       socket.off("message", handleMessage);
       socket.off("lobbyError", handleLobbyError);
     };
   }, [navigate]);
 
-  // 5. Chatroom joining/leaving with connection verification
+  // 5. Join chatroom once we have the username/lobbyId
   useEffect(() => {
     if (!socket || !lobbyId || !username) return;
 
-    debugLog("Attempting to join chatroom", {
-      lobbyId,
-      username,
-      socketConnected: socket.connected,
-      socketId: socket.id
-    });
+    debugLog("Attempting to join chatroom", { lobbyId, username });
 
     const joinTimeout = setTimeout(() => {
       if (!socket.connected) {
         debugLog("Join timeout - socket not connected");
-        alert("Connection timeout. Please refresh the page.");
+        alert("Connection timeout. Please refresh.");
       }
     }, 5000);
 
@@ -138,8 +94,8 @@ const ChatroomPage = () => {
         debugLog("Join error", response.error);
         alert(response.error);
       } else {
-        // After successfully joining the chatroom, request the role
-        debugLog("Successfully joined chatroom. Requesting role...");
+        // After joining, request role
+        debugLog("Joined chatroom. Requesting role...");
         socket.emit("requestRole", { lobbyId });
       }
     });
@@ -150,97 +106,71 @@ const ChatroomPage = () => {
     };
   }, [lobbyId, username]);
 
-
-// Handle timer update
-  // useEffect(() => {
-  //   const handleTimerUpdate = ({ timeLeft }) => {
-  //     debugLog("Timer updated", timeLeft);
-  //     setTimeLeft(timeLeft);
-  //   };
-
-  //   socket.on("timerUpdate", handleTimerUpdate);
-
-  //   return () => {
-  //     socket.off("timerUpdate", handleTimerUpdate);
-  //   };
-  // }, []);
-
+  // 6. NEW: Listen for "phaseUpdate"
   useEffect(() => {
-    // Listen for timer updates
-
-    const handleTimeUpdate = (data) => {
+    const handlePhaseUpdate = (data) => {
+      debugLog("PHASE UPDATE received", data);
+      setCurrentPhase(data.phase);
       setTimeLeft(data.timeLeft);
     };
 
-    socket.emit("timerUpdate", { lobbyId });
-    socket.on("currentTime", handleTimeUpdate);
+    socket.on("phaseUpdate", handlePhaseUpdate);
 
-    // socket.on("currentTime", ({ timeLeft }) => {
-    //   setTimeLeft(timeLeft);
-    // });
-
-    // socket.on("timerEnded", ({ message }) => {
-    //   console.log(message);
-    // });
-
-    // Cleanup listener
     return () => {
-      socket.off("currentTime");
-      // socket.off("timerEnded");
+      socket.off("phaseUpdate", handlePhaseUpdate);
     };
   }, []);
 
-  // Convert seconds to minutes:seconds format
+  // Utility: Format time (mm:ss)
   const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-// 6. Message sending with delivery confirmation (updated)
-const handleSendMessage = () => {
-  const trimmedMessage = message.trim();
-  if (trimmedMessage) {
-    // Clear input immediately
-    setMessage("");
-    
-    debugLog("Sending message", { message: trimmedMessage, lobbyId });
-    socket.emit(
-      "sendMessage",
-      {
-        lobbyId,
-        text: trimmedMessage
-      },
-      (deliveryConfirmation) => {
-        if (deliveryConfirmation?.error) {
-          debugLog("Message delivery failed", deliveryConfirmation.error);
-          // Optional: Re-add message to input if failed
-          // setMessage(trimmedMessage);
-        } else {
-          debugLog("Message delivered successfully");
+  // 7. Sending a message
+  const handleSendMessage = () => {
+    const trimmedMessage = message.trim();
+    if (trimmedMessage) {
+      setMessage("");
+      socket.emit(
+        "sendMessage",
+        { lobbyId, text: trimmedMessage },
+        (ack) => {
+          if (ack?.error) {
+            debugLog("Message delivery failed", ack.error);
+          } else {
+            debugLog("Message delivered successfully");
+          }
         }
-      }
-    );
-  }
-};
+      );
+    }
+  };
 
-  // 7. UI components with connection status display
   return (
     <div className="chatroom-container">
-      {/* <div className="connection-status">
-        Connection: {socketStatus} | Socket ID: {socket.connected ? socket.id : "N/A"}
-      </div> */}
-      
       <div className="chatroom-header">
         <h2>Chatroom</h2>
-        <button className="back-button" onClick={() => navigate("/")}>
+        <button
+          className="back-button"
+          onClick={() => navigate("/")}
+        >
           Back to Home
         </button>
-        {timeLeft !== null && <div className="timer-display">{formatTime(timeLeft)}</div>}
+      </div>
+
+      {/* Show day/night phase & timer */}
+      <div className="phase-timer">
+        <strong>Phase:</strong> {currentPhase.toUpperCase()} |{" "}
+        <strong>Time Left:</strong> {formatTime(timeLeft)}
       </div>
 
       {role && (
-        <div className={`role-banner ${role.toLowerCase() === 'mafia' ? 'mafia' : ''}`}>
+        <div
+          className={`role-banner ${
+            role.toLowerCase() === "mafia" ? "mafia" : ""
+          }`}
+        >
           Your Role: <span className="role-name">{role}</span>
         </div>
       )}
@@ -251,7 +181,7 @@ const handleSendMessage = () => {
             <span className="chatroom-timestamp">
               {new Date(msg.timestamp).toLocaleTimeString()}
             </span>
-            <span className="chatroom-username">{msg.sender}: </span>
+            <span className="chatroom-username"> {msg.sender}: </span>
             <span className="chatroom-text">{msg.text}</span>
           </div>
         ))}
@@ -267,12 +197,15 @@ const handleSendMessage = () => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault(); // Prevent default form behavior
+              e.preventDefault();
               handleSendMessage();
             }
           }}
         />
-        <button className="chatroom-send-button" onClick={handleSendMessage}>
+        <button
+          className="chatroom-send-button"
+          onClick={handleSendMessage}
+        >
           Send
         </button>
       </div>
