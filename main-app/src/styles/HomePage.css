@@ -1,0 +1,73 @@
+/* HomePage.css */
+
+/* Page container */
+.home-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e66465, #9198e5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Card container */
+  .home-card {
+    background-color: #fff;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+  }
+  
+  /* Title */
+  .home-title {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    color: #333;
+  }
+  
+  /* Subtitle */
+  .home-subtitle {
+    font-size: 1.2rem;
+    max-width: 600px;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+    color: #555;
+  }
+  
+  /* Button container */
+  .home-button-container {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  /* Generic button */
+  .home-button {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  /* Button hover effects */
+  .home-button:hover {
+    opacity: 0.9;
+  }
+  
+  /* Specific button styles */
+  .home-create {
+    background-color: #007bff;
+    color: #fff;
+  }
+  
+  .home-join {
+    background-color: #28a745;
+    color: #fff;
+  }
+  
