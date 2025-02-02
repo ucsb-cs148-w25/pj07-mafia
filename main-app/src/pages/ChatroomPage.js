@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import socket from "../service/socket";
+import VotingPopup from "../components/VotingPopup"; // Import Voting Popup
 import "../styles/ChatroomPage.css";
 
 const ChatroomPage = () => {
@@ -19,24 +20,30 @@ const ChatroomPage = () => {
   const [currentPhase, setCurrentPhase] = useState(""); 
   const [timeLeft, setTimeLeft] = useState(0);
 
+  // Voting states
+  const [players, setPlayers] = useState([]); 
+  const [isVoting, setIsVoting] = useState(false);
+  const [voteType, setVoteType] = useState("villager"); // "villager" or "mafia"
+  const [voteId, setVoteId] = useState(null);
+  const [isVoteLocked, setIsVoteLocked] = useState(false);
+  const [isEliminated, setIsEliminated] = useState(false);
+
   // Debugging logger
   const debugLog = (message, data = null) => {
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`[${timestamp}] ${message}`, data);
+    console.log(`[DEBUG] ${message}`, data);
   };
 
-  // 1. Load username, watch socket status
+  // Load username
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
     if (storedUsername) {
       setUsername(storedUsername);
-      debugLog("Username loaded from storage:", storedUsername);
     } else {
       navigate("/");
     }
   }, [navigate]);
 
-  // 2. Handle role assignment
+  // Handle role assignment
   useEffect(() => {
     const handleRoleAssignment = (data) => {
       debugLog("ROLE ASSIGNMENT RECEIVED", data);
@@ -49,52 +56,36 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 3. Messages: autoscroll
+  // Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 4. Handle incoming chat messages
+  // Handle incoming messages
   useEffect(() => {
     const handleMessage = (newMessage) => {
       setMessages((prev) => [...prev, newMessage]);
       debugLog("New message received", newMessage);
     };
-    const handleLobbyError = (err) => {
-      debugLog("Lobby error", err.message);
-      alert(err.message);
-      navigate("/");
-    };
 
     socket.on("message", handleMessage);
-    socket.on("lobbyError", handleLobbyError);
 
     return () => {
       socket.off("message", handleMessage);
-      socket.off("lobbyError", handleLobbyError);
     };
-  }, [navigate]);
+  }, []);
 
-  // 5. Join chatroom once we have the username/lobbyId
+  // Join chatroom
   useEffect(() => {
     if (!socket || !lobbyId || !username) return;
 
-    debugLog("Attempting to join chatroom", { lobbyId, username });
-
-    const joinTimeout = setTimeout(() => {
-      if (!socket.connected) {
-        debugLog("Join timeout - socket not connected");
-        alert("Connection timeout. Please refresh.");
-      }
-    }, 5000);
+    debugLog("Joining chatroom...", { lobbyId, username });
 
     socket.emit("joinChatroom", { lobbyId, username }, (response) => {
-      clearTimeout(joinTimeout);
       if (response?.error) {
         debugLog("Join error", response.error);
         alert(response.error);
       } else {
-        // After joining, request role
         debugLog("Joined chatroom. Requesting role...");
         socket.emit("requestRole", { lobbyId });
       }
@@ -106,7 +97,7 @@ const ChatroomPage = () => {
     };
   }, [lobbyId, username]);
 
-  // 6. NEW: Listen for "phaseUpdate"
+  // Listen for phase updates
   useEffect(() => {
     const handlePhaseUpdate = (data) => {
       debugLog("PHASE UPDATE received", data);
@@ -121,56 +112,47 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // Utility: Format time (mm:ss)
+  // Send message
+  const handleSendMessage = () => {
+    if (!message.trim() || isVoteLocked || isEliminated) return;
+
+    socket.emit("sendMessage", { lobbyId, text: message.trim() });
+    setMessage("");
+  };
+
+  // Format time
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // 7. Sending a message
-  const handleSendMessage = () => {
-    const trimmedMessage = message.trim();
-    if (trimmedMessage) {
-      setMessage("");
-      socket.emit(
-        "sendMessage",
-        { lobbyId, text: trimmedMessage },
-        (ack) => {
-          if (ack?.error) {
-            debugLog("Message delivery failed", ack.error);
-          } else {
-            debugLog("Message delivered successfully");
-          }
-        }
-      );
-    }
-  };
-
   return (
     <div className="chatroom-container">
       <div className="chatroom-header">
         <h2>Chatroom</h2>
-        <button
-          className="back-button"
-          onClick={() => navigate("/")}
-        >
+        <button className="back-button" onClick={() => navigate("/")}>
           Back to Home
         </button>
+
+        <div className="voting-controls">
+          <select value={voteType} onChange={(e) => setVoteType(e.target.value)}>
+            <option value="villager">Villager Vote</option>
+            <option value="mafia">Mafia Kill</option>
+          </select>
+          <button onClick={() => socket.emit("start_vote", { voteType, lobbyId })}>
+            Start Voting
+          </button>
+        </div>
       </div>
 
-      {/* Show day/night phase & timer */}
       <div className="phase-timer">
         <strong>Phase:</strong> {currentPhase.toUpperCase()} |{" "}
         <strong>Time Left:</strong> {formatTime(timeLeft)}
       </div>
 
       {role && (
-        <div
-          className={`role-banner ${
-            role.toLowerCase() === "mafia" ? "mafia" : ""
-          }`}
-        >
+        <div className={`role-banner ${role.toLowerCase() === "mafia" ? "mafia" : ""}`}>
           Your Role: <span className="role-name">{role}</span>
         </div>
       )}
@@ -178,9 +160,6 @@ const ChatroomPage = () => {
       <div className="chatroom-messages">
         {messages.map((msg, idx) => (
           <div key={idx} className="chatroom-message">
-            <span className="chatroom-timestamp">
-              {new Date(msg.timestamp).toLocaleTimeString()}
-            </span>
             <span className="chatroom-username"> {msg.sender}: </span>
             <span className="chatroom-text">{msg.text}</span>
           </div>
@@ -202,13 +181,21 @@ const ChatroomPage = () => {
             }
           }}
         />
-        <button
-          className="chatroom-send-button"
-          onClick={handleSendMessage}
-        >
+        <button className="chatroom-send-button" onClick={handleSendMessage}>
           Send
         </button>
       </div>
+
+      {isVoting && (
+        <VotingPopup
+          players={players}
+          onVote={(player) => socket.emit("submit_vote", { lobbyId, voteId, voter: username, target: player })}
+          onClose={() => setIsVoting(false)}
+          role={voteType === "mafia" ? "Mafia" : "Villager"}
+          username={username}
+          lobbyId={lobbyId}
+        />
+      )}
     </div>
   );
 };
