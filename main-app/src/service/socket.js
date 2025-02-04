@@ -1,7 +1,9 @@
 // main-app/src/services/socket.js
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:4000", {
+const backendUrl = "https://mafia-backend.dokku-07.cs.ucsb.edu" || "http://localhost:4000";
+
+const socket = io(backendUrl, {
   autoConnect: true,
   withCredentials: true,
   transports: ["websocket"] // Force WebSocket transport
