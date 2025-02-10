@@ -1,5 +1,7 @@
 Retrospective 01 Discussion:
 
+Team: Priyanka Ballani [X], Shivani Madhan [X], Victor Prchlik [X], Albert Wang [X], Hung Khuu [X], Tyler Tran [X], Siddhant Subramanian[X]
+
 Sharing schedules with each other to be more up to date with when people will respond.
 Using a single document or place to store all our progress/project info.
 - Could use Kanban or text.
