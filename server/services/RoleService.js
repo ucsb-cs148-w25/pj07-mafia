@@ -8,6 +8,7 @@ Ensure balanced role distribution.
 Provide role-specific logic (e.g., Mafia actions).
 
 */
+
 const { getLobby } = require('./lobbyService');
 
 /**
@@ -94,5 +95,6 @@ function assignRoles(lobbyId) {
     console.log(`- ${player.username}: ${player.role}`);
   });
 }
+
 
 module.exports = { assignRoles };

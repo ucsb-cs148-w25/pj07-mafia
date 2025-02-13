@@ -18,6 +18,9 @@ class Lobby {
     this.id = id;
     this.creator = creator;
     this.players = [];
+    this.timer = null;
+    this.timeLeft = 15;
+    this.phase = "day";
     this.hasStarted = false;
   }
 }

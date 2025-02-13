@@ -14,119 +14,89 @@ function initChatSocket(io) {
   io.on('connection', (socket) => {
     console.log('User connected to chatroom:', socket.id);
 
-    /**
-     * Join Chatroom
-     * The client calls: socket.emit("joinChatroom", { lobbyId, username });
-     * We do keep track of them in the same room as the lobby, but for chat.
-     */
-    socket.on('joinChatroom', ({ lobbyId, username }) => {
-      // The server can still store them in the same "room"
-      // (They should already be in that room from the lobbySocket, but this is optional.)
+    // 1. joinChatroom
+    socket.on("joinChatroom", ({ lobbyId, username }, ack) => {
       socket.join(lobbyId);
 
-      // For debugging: Check if we actually have a valid lobby
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
         console.log(`joinChatroom: Lobby ${lobbyId} does NOT exist.`);
-        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
+        if (ack) ack({ error: "Lobby does not exist." });
+        return socket.emit("lobbyError", { message: "Lobby does not exist." });
       }
-      // Check if the player is in that lobby
+
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
         console.log(`joinChatroom: Player with socketId ${socket.id} not found in Lobby ${lobbyId}.`);
-        // This might happen if the user never joined the lobby or there's a mismatch
-        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
+        if (ack) ack({ error: "You are not in this lobby." });
+        return socket.emit("lobbyError", { message: "You are not in this lobby." });
       }
 
-      // Log who is actually joining
-      console.log(`joinChatroom: Player ${player.username} (Socket: ${socket.id}) joined chat in Lobby ${lobbyId}.`);
+      console.log(`joinChatroom: Player ${player.username} joined chat in Lobby ${lobbyId}.`);
 
-      // Optionally broadcast that a user joined
-      socket.to(lobbyId).emit('message', {
+      if (ack) ack({ success: true });
+
+      socket.to(lobbyId).emit("message", {
         text: `${player.username} has joined the chat.`,
-        sender: 'System',
+        sender: "System",
         timestamp: new Date(),
       });
-      if (lobby.hasStarted) {
-        const player = lobby.players.find((p) => p.socketId === socket.id);
-        if (player && player.role) {
-          // Re-send the role
-          socket.emit('roleAssigned', {
-            role: player.role,
-            // Include anything else relevant to the player
-          });
-        }
+
+      if (lobby.hasStarted && player.role) {
+        socket.emit("roleAssigned", { role: player.role });
       }
     });
 
+    // 2. requestRole
     socket.on('requestRole', ({ lobbyId }) => {
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
-        console.log(`requestRole: Lobby ${lobbyId} does not exist.`);
         return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
       }
 
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
-        console.log(`requestRole: Player with socketId ${socket.id} not found in Lobby ${lobbyId}.`);
         return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
       }
 
       if (player.role) {
-        console.log(`requestRole: Assigning role ${player.role} to ${player.username}`);
         socket.emit('roleAssigned', { role: player.role });
       } else {
-        console.log(`requestRole: Player ${player.username} does not have a role assigned yet.`);
-        // Optionally, you could emit an error or a default role
         socket.emit('lobbyError', { message: 'Role not assigned yet.' });
       }
     });
-    /**
-     * Send Message
-     * The client calls: socket.emit("sendMessage", { lobbyId, text });
-     * (We ignore or override any "sender" the client might pass.)
-     */
+
+    // 3. sendMessage => skip if not alive
     socket.on('sendMessage', ({ lobbyId, text }) => {
-      // Use the server's data to figure out who is sending.
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
-        // If the lobby doesn't exist, optionally handle an error
-        socket.emit('lobbyError', { message: 'Lobby does not exist.' });
-        return;
+        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
       }
 
-      // Find the player in the lobby with this socket.id
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
-        // The user isn't recognized in this lobby
-        socket.emit('lobbyError', { message: 'You are not in this lobby.' });
-        return;
+        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
       }
 
-      // Get the actual username from the server-side record
-      const actualUsername = player.username;
+      if (!player.isAlive) {
+        console.log(`[DEBUG] ${player.username} tried to chat but is eliminated.`);
+        return; 
+      }
 
-      // Construct the final message object
-      const messageObj = {
+      const msgObj = {
         text,
-        sender: actualUsername,    // override client-provided "sender"
+        sender: player.username,
         timestamp: new Date(),
       };
 
-      // Broadcast to everyone in the same lobby
-      io.to(lobbyId).emit('message', messageObj);
-      console.log(`Message from ${actualUsername} in lobby ${lobbyId}: ${text}`);
+      io.to(lobbyId).emit('message', msgObj);
+      console.log(`Message from ${player.username} in lobby ${lobbyId}: ${text}`);
     });
 
-    /**
-     * Optional: Leave Chatroom
-     * If your front end emits "leaveChatroom" when the user navigates away or closes,
-     * you can handle it here. Typically, the "disconnect" event might suffice.
-     */
+    // 4. leaveChatroom
     socket.on('leaveChatroom', ({ lobbyId, username }) => {
       socket.leave(lobbyId);
 
-      // Optionally broadcast that the user left
       socket.to(lobbyId).emit('message', {
         text: `${username} has left the chat.`,
         sender: 'System',
@@ -134,11 +104,7 @@ function initChatSocket(io) {
       });
     });
 
-    /**
-     * Disconnect
-     * The user might also have left the chat/lobby, so we can handle that
-     * in the LOBBY or GAME logic (like removing them). But just log here.
-     */
+    // 5. disconnect
     socket.on('disconnect', () => {
       console.log('User disconnected from chatroom:', socket.id);
     });
