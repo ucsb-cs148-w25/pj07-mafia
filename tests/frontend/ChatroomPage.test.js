@@ -1,0 +1,1 @@
+// Placeholder for ChatroomPage.test.js, mainly for syncing the frontend tests folder.
