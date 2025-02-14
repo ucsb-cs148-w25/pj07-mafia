@@ -42,3 +42,15 @@ Gave me a list of User Stories and subtasks to implement on the frontend.
 - **Usefulness:** This was effective in breaking down User Stories into small, easier-to-implement tasks. It also suggested adding a lot of features that I hadn't thought about. There were some User Stories that it gave that were already implemented though. This could possibly have been because those features were not visible from the frontend code I had given the model. But, some features it suggested were clearly already implemented.
 - **Ensuring Correctness & Fair Use:** The only way that I could check how "correct" the user stories were was by seeing if they had already been implemented. I'm not too sure how I could ensure fair use for this specific result as there's no concrete source to point to that produced these stories.
 - **Going Forward:** I think DeepSeek will be very useful in coming up with ideas to implement into our app. It covered a lot of blindspots we hadn't thought of. But we definitely should not be relying on it as it does not have the whole scope of our project in mind.
+
+## Team Member: Victor
+
+**AI Tool Utilized:** Dall-E
+
+**Outcomes Produced:**
+Gave me ideas for how the UI of the game menu and main lobby would look.
+
+**Reflections:**
+- **Usefullness:** This definitely gave me an idea of a way in which these menus could be designed and also gave me an idea of what style the game can be designed around. However, the designs themselves, in my opinion, looked quite cluttered and not very user friendly. It also got some basic things such as the spelling of the game title wrong.
+- **Ensuring Correctness & Fair Use:** Determining correctness is more subjective in this scenario as it is all dependant on what the end goal is for our UI elements. Since I gave a description of the overall game to the AI, it did a good job of making decent designs given the purpose, but I wouldn't say this guarantees correctness. It's hard for me to ensure fair use, it seems like these are uniquely generated pages but it could take very strong influence from other pages out there that I am not aware of. Maybe there is a way to see the connection via a reverse image search, but there is still no way that I can think of to guarantee fair use.
+- **Going Forward:** I believe Dall-E can be useful in giving ideas for UI elements and themes, but as it is right now, it probably shouldn't be followed exactly as the elements it generates are not perfect and could definitely use some tweaking from an actual design perspective.
