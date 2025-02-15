@@ -54,3 +54,16 @@ Gave me ideas for how the UI of the game menu and main lobby would look.
 - **Usefullness:** This definitely gave me an idea of a way in which these menus could be designed and also gave me an idea of what style the game can be designed around. However, the designs themselves, in my opinion, looked quite cluttered and not very user friendly. It also got some basic things such as the spelling of the game title wrong.
 - **Ensuring Correctness & Fair Use:** Determining correctness is more subjective in this scenario as it is all dependant on what the end goal is for our UI elements. Since I gave a description of the overall game to the AI, it did a good job of making decent designs given the purpose, but I wouldn't say this guarantees correctness. It's hard for me to ensure fair use, it seems like these are uniquely generated pages but it could take very strong influence from other pages out there that I am not aware of. Maybe there is a way to see the connection via a reverse image search, but there is still no way that I can think of to guarantee fair use.
 - **Going Forward:** I believe Dall-E can be useful in giving ideas for UI elements and themes, but as it is right now, it probably shouldn't be followed exactly as the elements it generates are not perfect and could definitely use some tweaking from an actual design perspective.
+
+
+## Team Member: PRIYANKA 
+
+**AI Tool Utilized:** ChatGPT
+
+**Ouctomes Produced:** 
+Produced sample documentation for select frontend files. 
+
+**Reflections:**
+- **Usefulness:** It was fairly effective in understanding the purpose of our code and defining major variables/functions. It also had the potential to provide detailed documentation if asked to.
+- **Ensuring Correctness & Fair Use:** The only real way was to sanity check and make sure that everything aligned with our intent.
+- **Going Forward:** I definitely think it's useful but I think sanity checking will have to be done for every line written because sometimes it makes assumptions that may make sense for the specific file but maybe not in the context of our entire codebase and that is knowledge that only we have. 
