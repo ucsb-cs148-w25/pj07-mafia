@@ -1,73 +1,163 @@
 /* HomePage.css */
 
 /* Page container */
+/* .home-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #590303, #000000); /* Crimson Red Gradient */
+  /* display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'serif'; /* Serif font for the entire page */
+/* } */
+
 .home-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #e66465, #9198e5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Card container */
-  .home-card {
-    background-color: #fff;
-    border-radius: 8px;
-    width: 400px;
-    max-width: 90%;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    text-align: center;
-  }
-  
-  /* Title */
-  .home-title {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    color: #333;
-  }
-  
-  /* Subtitle */
-  .home-subtitle {
-    font-size: 1.2rem;
-    max-width: 600px;
-    line-height: 1.5;
-    margin-bottom: 2rem;
-    color: #555;
-  }
-  
-  /* Button container */
-  .home-button-container {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-  }
-  
-  /* Generic button */
-  .home-button {
-    padding: 1rem 2rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s ease-in-out;
-  }
-  
-  /* Button hover effects */
-  .home-button:hover {
-    opacity: 0.9;
-  }
-  
-  /* Specific button styles */
-  .home-create {
-    background-color: #007bff;
-    color: #fff;
-  }
-  
-  .home-join {
-    background-color: #28a745;
-    color: #fff;
-  }
-  
+  min-height: 100vh;
+  background: radial-gradient(circle, #3e0303, #230101); /* Radial Crimson Red Gradient */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'serif'; /* Serif font for the entire page */
+}
+
+/* Card container */
+.home-card {
+  background-color: #250202cf; /* Darker Crimson Red */
+  border-radius: 8px;
+  width: 700px; /* Increased width for rectangular shape */
+  max-width: 90%;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+/* Title */
+.home-title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #f9ecd2; /* Beige/Off-white for title */
+  text-shadow: 4px 4px 2px rgb(12, 0, 0);
+}
+
+/* Subtitle */
+.home-subtitle {
+  font-size: 1.4rem;
+  font-weight: 650;
+  font-style: italic;
+  max-width: 700px;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+  color: #ecd9b2; /* Lighter beige for subtitle */
+}
+
+/* Button container */
+.home-button-container {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem; /* Added margin below buttons */
+}
+
+/* Generic button */
+.home-button {
+  padding: 1.2rem 2.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  font-family: 'serif'; /* Serif font for buttons */
+}
+
+/* Button hover effects */
+.home-button:hover {
+  transform: scale(1.05);
+  opacity: 0.95;
+}
+
+/* Specific button styles (Create and Join) */
+.home-create, .home-join {
+  background-color: #64170e; /* Sienna */
+  color: #f9ecd2; /* Beige/Off-white text */
+}
+
+/* Instructions button positioning */
+.instructions-button-container {
+  display: flex; /* Make it a flex container */
+  justify-content: center; /* Center the button horizontally */
+  margin-bottom: 30px; /* Space from the bottom of the page */
+}
+
+.instructions-button-container .home-button { /* Target the instructions button */
+  background-color: #64170e; /* Slightly different shade (Peru) */
+  color: #f9ecd2;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, #2f0101, #1d0101); /* Radial Crimson Red Gradient */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #f9ecd2; /* Beige with slight transparency */
+  padding: 30px;
+  border-radius: 8px;
+  max-width: 700px;
+  width: 90%;
+  color: #6b0707; /* Dark red for text in modal */
+  text-align: left;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  font-family: serif; /* Serif font for modal content */
+}
+
+.modal-content h2 {
+text-align: center;
+font-size: 2.25rem;
+margin-bottom: 1rem;
+}
+
+.modal-content p {
+margin-bottom: 1.25rem;
+line-height: 1.6;
+}
+
+.modal-content ul {
+list-style-type: disc;
+padding-left: 20px;
+margin-bottom: 1rem;
+}
+
+.modal-content li {
+margin-bottom: 0.5rem;
+}
+
+.button-wrapper { /* Style the wrapper div */
+  display: flex;
+  justify-content: center; /* Center the button horizontally */
+  margin-top: 1.5rem; /* Add spacing above the button */
+}
+
+.close-button {
+  padding: 1.2rem 2.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  font-family: 'serif'; /* Serif font for buttons */
+  margin-bottom: 1.5rem;
+  background-color: #64170e;
+  color: #f9ecd2;
+}

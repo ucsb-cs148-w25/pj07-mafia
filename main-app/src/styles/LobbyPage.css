@@ -3,67 +3,68 @@
 /* Page container */
 .lobby-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #8e9eab, #eef2f3);
+  background: radial-gradient(circle, #2f0101, #1d0101); /* Radial Crimson Red Gradient */
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'serif'; /* Serif font for the entire page */
 }
 
 /* Card container */
 .lobby-card {
-  background-color: #fff;
+  background-color: #440303; /* Darker Crimson Red, same as HomePage */
   border-radius: 8px;
-  width: 400px;
+  width: 550px; /* Increased width, same as HomePage */
   max-width: 90%;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
   text-align: center;
 }
 
 /* Heading */
 .lobby-heading {
-  margin-bottom: 1rem;
-  font-size: 2rem;
+  margin-bottom: 1.75rem;
+  font-size: 2.25rem;
+  color: #f9ecd2; /* Beige/Off-white, same as HomePage */
+  text-shadow: 4px 4px 2px rgb(12, 0, 0); /* Same text shadow as HomePage */
 }
 
 /* Input field */
 .lobby-input {
   padding: 0.5rem;
+  font-family: serif;
   width: 80%;
   margin-bottom: 1rem;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid #1d0101;  /* Keep the border if you like it */
+  background-color: #330505; /* Darker background for input */
+  color: #f9ecd2; /* Beige/Off-white text for input */
 }
 
 /* Generic button */
 .lobby-button {
   margin-top: 10px;
-  padding: 0.5rem 1rem;
+  margin-bottom: 2rem;
+  padding: 1.2rem 2.5rem; /* Same padding as HomePage buttons */
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.4rem; /* Same font size as HomePage buttons */
+  font-weight: bold; /* Same font weight */
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out; /* Same transitions */
+  font-family: 'serif'; /* Serif font */
 }
 
 .lobby-button:hover {
-  opacity: 0.9;
+  transform: scale(1.05); /* Same hover effect */
+  opacity: 0.95;
 }
 
 /* Specific button styles */
-.lobby-button-start {
-  background-color: #28a745;
-  color: #fff;
-}
-
-.lobby-button-back {
-  background-color: #dc3545;
-  color: #fff;
-}
-
-.lobby-button-join {
-  background-color: #007bff;
-  color: #fff;
+.lobby-button-start, .lobby-button-back, .lobby-button-join {
+  background-color: #64170e; /* Sienna, same as HomePage buttons */
+  color: #f9ecd2; /* Beige/Off-white text, same as HomePage */
 }
 
 /* Player list */
@@ -71,11 +72,28 @@
   list-style: none;
   padding: 0;
   margin: 1rem 0;
+  color: #f9ecd2; /* Beige/Off-white text for player list */
 }
+
+/* Lobby ID and Player List Text Styles */
+.lobby-id-text /* Style for the "ID:" text */
+{
+  color: #f9ecd2; /* Beige color */
+  font-size: 1.25rem; /* Adjust font size as needed */
+  margin-top: -0.75rem;
+  margin-bottom: 3rem; /* Add some spacing below */
+}
+
+.lobby-players-title { /* Style for the "Players in Lobby" text */
+  color: #f9ecd2; /* Beige color */
+  font-size: 1.25rem; /* Adjust font size as needed */
+  margin-bottom: 1.5rem; /* Add some spacing below */
+}
+
 
 .lobby-player-item {
   margin-bottom: 8px;
-  background: #f4f4f4;
+  background-color: rgba(51, 5, 5, 0.8); /* Darker background for player items */
   border-radius: 4px;
   padding: 5px 10px;
   display: flex;
@@ -84,4 +102,11 @@
 
 .lobby-player-item span {
   margin-right: 8px;
+}
+
+.player-avatar { /* Style for the avatar image */
+  width: 16px;  /* Adjust size as needed */
+  height: 16px;
+  margin-right: 5px;
+  vertical-align: middle;
 }
