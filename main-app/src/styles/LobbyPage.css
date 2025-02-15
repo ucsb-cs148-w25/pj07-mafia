@@ -45,6 +45,8 @@
 .lobby-button {
   margin-top: 10px;
   margin-bottom: 2rem;
+  margin-right: 0.5rem;
+  margin-left: 0.5rem;
   padding: 1.2rem 2.5rem; /* Same padding as HomePage buttons */
   border: none;
   border-radius: 8px;

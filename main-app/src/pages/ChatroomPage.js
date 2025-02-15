@@ -176,10 +176,12 @@ const ChatroomPage = () => {
   };
 
   return (
-    <div className="chatroom-container">
+    <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""}`}>
       <div className="chatroom-header">
-        <h2>Chatroom</h2>
+        <h2>{currentPhase.toUpperCase()}</h2>
         <button className="back-button" onClick={() => navigate("/")}>Back to Home</button>
+
+        <div className="phase-timer">{formatTime(timeLeft)}</div>
 
         <div className="voting-controls">
           <select value={voteType} onChange={(e) => setVoteType(e.target.value)}>
@@ -189,15 +191,10 @@ const ChatroomPage = () => {
           <button
             onClick={handleStartVoting}
             disabled={currentPhase !== "voting" || isEliminated}
-          >
+            className={`${role?.toLowerCase() === "mafia" ? "mafia-player" : "villager-player"}`}>
             Start Voting
           </button>
         </div>
-      </div>
-
-      <div className="phase-timer">
-        <strong>Phase:</strong> {currentPhase.toUpperCase()} |{" "}
-        <strong>Time Left:</strong> {formatTime(timeLeft)}
       </div>
 
       {role && (
