@@ -42,3 +42,16 @@ Gave me a list of User Stories and subtasks to implement on the frontend.
 - **Usefulness:** This was effective in breaking down User Stories into small, easier-to-implement tasks. It also suggested adding a lot of features that I hadn't thought about. There were some User Stories that it gave that were already implemented though. This could possibly have been because those features were not visible from the frontend code I had given the model. But, some features it suggested were clearly already implemented.
 - **Ensuring Correctness & Fair Use:** The only way that I could check how "correct" the user stories were was by seeing if they had already been implemented. I'm not too sure how I could ensure fair use for this specific result as there's no concrete source to point to that produced these stories.
 - **Going Forward:** I think DeepSeek will be very useful in coming up with ideas to implement into our app. It covered a lot of blindspots we hadn't thought of. But we definitely should not be relying on it as it does not have the whole scope of our project in mind.
+
+
+## Team Member: PRIYANKA 
+
+**AI Tool Utilized:** ChatGPT
+
+**Ouctomes Produced:** 
+Produced sample documentation for select frontend files. 
+
+**Reflections:**
+- **Usefulness:** It was fairly effective in understanding the purpose of our code and defining major variables/functions. It also had the potential to provide detailed documentation if asked to.
+- **Ensuring Correctness & Fair Use:** The only real way was to sanity check and make sure that everything aligned with our intent.
+- **Going Forward:** I definitely think it's useful but I think sanity checking will have to be done for every line written because sometimes it makes assumptions that may make sense for the specific file but maybe not in the context of our entire codebase and that is knowledge that only we have. 
