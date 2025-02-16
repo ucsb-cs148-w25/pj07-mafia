@@ -67,13 +67,13 @@
 .chatroom-message {
   margin-bottom: 10px;
   line-height: 1.4;
-  color: #6b0707;
+  color: #110101;
 }
 
 /* Username */
 .chatroom-username {
   font-weight: bold;
-  color: #6b0707;
+  color: #110101;
 }
 
 /* Timestamp */
@@ -100,7 +100,7 @@
   border-radius: 4px;
   font-size: 1rem;
   font-family: serif;
-  color: #6b0707;
+  color: #110101;
 }
 
 /* Send button */
@@ -156,7 +156,7 @@
   border-radius: 5px;
   padding: 5px;
   background-color: #f9ecd2;
-  color: #6b0707;
+  color: #110101;
 }
 
 .voting-controls button {
@@ -188,6 +188,62 @@
 }
 
 .night-mode {
-  background: #0c0000; /* Set background to black */
+  background: #110101; /* Set background to black */
   color: #f9ecd2; /* Adjust text color for better readability */
 }
+
+.night-mode .chatroom-message {
+  color: #f9ecd2;
+}
+
+.night-mode .chatroom-username {
+  color: #f9ecd2;
+}
+
+.night-mode .chatroom-input-container {
+  background-color: #000000;
+}
+
+.night-mode .chatroom-input {
+  border: 1px solid #000000;
+  background-color: #110101;
+  color: #f9ecd2;
+}
+
+.night-mode .chatroom-header {
+  background: radial-gradient(circle, #470303, #200101);
+  /* color: #110101; */
+}
+
+.night-mode .voting-controls select {
+  background-color: #110101;
+  color: #f9ecd2;
+}
+
+.night-mode .role-banner {
+  background-color: #732800;
+}
+
+.night-mode .voting-controls button.villager-player {
+  background-color: #732800;
+}
+
+.night-mode .voting-controls button.villager-player:hover {
+  background-color: #7328009e;
+}
+
+.night-mode .role-banner.mafia {
+  background-color: #810b03;
+}
+
+.night-mode .voting-controls button.mafia-player {
+  background-color: #810b03;
+}
+
+.night-mode .voting-controls button.mafia-player:hover {
+  background-color: #5f0903;
+}
+
+/* .night-mode .role-banner {
+  color: #110101;
+} */
