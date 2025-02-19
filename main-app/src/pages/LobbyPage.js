@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import socket from "../service/socket";
 import "../styles/LobbyPage.css"; // Import your CSS
+import avatar from "../styles/avatar.png";
 
 function LobbyPage() {
   const { lobbyId: routeLobbyId } = useParams();
@@ -125,25 +126,28 @@ function LobbyPage() {
           </>
         ) : (
           <>
-            <h2 className="lobby-heading">Lobby Page</h2>
+            <h2 className="lobby-heading">Lobby</h2>
 
             {lobbyId && (
-              <p>
-                <strong>Lobby ID:</strong> {lobbyId}
+              <p className="lobby-id-text"> {/* Added class here */}
+                <strong>ID:</strong> <span className="lobby-id-value">{lobbyId}</span>{/* Added class here */}
               </p>
             )}
 
-            <h3>Players in Lobby:</h3>
+            <h3 className="lobby-players-title">Players in Lobby:</h3> {/* Added class here */}
             <ul className="lobby-players-list">
               {players.map((player) => (
                 <li key={player.id} className="lobby-player-item">
-                  <span role="img" aria-label="player">
-                    👤
-                  </span>{" "}
+                  <img 
+                    src={avatar} 
+                    alt="Player Avatar" 
+                    className="player-avatar"
+                  />{" "}
                   {player.name}
                 </li>
               ))}
             </ul>
+
 
             {isCreator && isGameReady && (
               <button
