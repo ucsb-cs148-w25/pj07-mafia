@@ -9,7 +9,10 @@ Provide role-specific logic (e.g., Mafia actions).
 
 */
 
-const { MIN_PLAYERS, MAX_PLAYERS } = require('./constants');
+import { 
+  MIN_PLAYERS, MAX_PLAYERS, TWO_MAFIA_LIMIT, 
+  THREE_MAFIA_LIMIT, TWO_DOC_LIMIT, TWO_DET_LIMIT 
+} from constants.js
 const { getLobby } = require('./lobbyService');
 
 /**
