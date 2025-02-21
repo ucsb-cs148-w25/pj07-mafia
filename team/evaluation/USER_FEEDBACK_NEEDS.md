@@ -8,11 +8,18 @@
 - Does the theme match the name of our product, and is the name itself appealing and fitting?
 - What suggestions do users have to make the interface more visually appealing and less cluttered?
 
+![Home Page](home.png)
+![Join Lobby Page](join.png)
+![Day Phase Page](day.png)
+![Night Phase Page](night.png)
+
 ### 2. Instructions and Onboarding
 **Questions to ask users:**
 - Are the instructions on how to play the game clear?
 - Do the role explanations make sense and provide enough detail?
 - Would tooltips or a quick tutorial improve understanding for new players?
+
+![Instructions Page](instructions.png)
 
 ### 3. Gameplay & AI Integration
 **Questions to ask users:**
