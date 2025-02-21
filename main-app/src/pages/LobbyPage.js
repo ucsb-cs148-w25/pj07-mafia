@@ -129,10 +129,49 @@ function LobbyPage() {
             <h2 className="lobby-heading">Lobby</h2>
 
             {lobbyId && (
-              <p className="lobby-id-text"> {/* Added class here */}
-                <strong>ID:</strong> <span className="lobby-id-value">{lobbyId}</span>{/* Added class here */}
-              </p>
-            )}
+  <div 
+    className="lobby-id-container" 
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%'
+    }}
+  >
+    <p className="lobby-id-text" style={{ margin: 0, marginRight: '8px' }}>
+      <strong>ID: </strong>
+      <span className="lobby-id-value">{lobbyId}</span>
+    </p>
+    <button 
+      className="copy-button" 
+      onClick={() => {
+        navigator.clipboard.writeText(lobbyId);
+        alert("Lobby ID copied to clipboard!");
+      }}
+      style={{ 
+        background: 'none', 
+        border: 'none', 
+        padding: 0, 
+        cursor: 'pointer',
+        color: 'white' // Sets the icon color to white
+      }}
+      title="Copy Lobby ID"
+    >
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="16" 
+        height="16" 
+        fill="currentColor" 
+        viewBox="0 0 16 16"
+      >
+        <path d="M10 1H2a1 1 0 0 0-1 1v10h1V2h8V1z"/>
+        <path d="M14 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zm-1 10H6V6h7v8z"/>
+      </svg>
+    </button>
+  </div>
+)}
+
+
 
             <h3 className="lobby-players-title">Players in Lobby:</h3> {/* Added class here */}
             <ul className="lobby-players-list">
