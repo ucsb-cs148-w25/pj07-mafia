@@ -14,7 +14,7 @@ const DAY_DURATION = 20;
 const VOTING_DURATION = 30;
 const NIGHT_DURATION = 40;
 
-const MIN_PLAYERS = 6; // Example minimum
+const MIN_PLAYERS = 2; // Example minimum
 const MAX_PLAYERS = 20;
 
 const lobbies = {};

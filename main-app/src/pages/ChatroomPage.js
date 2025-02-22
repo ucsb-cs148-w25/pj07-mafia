@@ -184,16 +184,21 @@ const ChatroomPage = () => {
         <div className="phase-timer">{formatTime(timeLeft)}</div>
 
         <div className="voting-controls">
-          <select value={voteType} onChange={(e) => setVoteType(e.target.value)}>
-            <option value="villager">Villager Vote</option>
-            <option value="mafia">Mafia Kill</option>
-          </select>
-          <button
-            onClick={handleStartVoting}
-            disabled={currentPhase !== "voting" || isEliminated}
-            className={`${role?.toLowerCase() === "mafia" ? "mafia-player" : "villager-player"}`}>
-            Start Voting
-          </button>
+          {(currentPhase === "night" || currentPhase === "voting") && role?.toLowerCase() === "mafia" && (
+            <select value={voteType} onChange={(e) => setVoteType(e.target.value)}>
+              <option value="villager">Villager Vote</option>
+              <option value="mafia">Mafia Kill</option>
+            </select>
+          )}
+          {((currentPhase === "night" && role?.toLowerCase() === "mafia") || currentPhase === "voting") && (
+            <button
+              onClick={handleStartVoting}
+              disabled={currentPhase !== "voting" || isEliminated}
+              className={`${role?.toLowerCase() === "mafia" ? "mafia-player" : "villager-player"}`}>
+              Start Voting
+            </button>
+          )}
+
         </div>
       </div>
 
@@ -213,28 +218,30 @@ const ChatroomPage = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="chatroom-input-container">
-        <textarea
-          className="chatroom-input"
-          rows="2"
-          placeholder="Type your message..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-        />
-        <button 
-          className="chatroom-send-button" 
-          onClick={handleSendMessage}
-          disabled={chatDisabled}
-        >
-          Send
-        </button>
-      </div>
+      {!(currentPhase === "voting" || currentPhase === "night") && (
+        <div className="chatroom-input-container">
+          <textarea
+            className="chatroom-input"
+            rows="2"
+            placeholder="Type your message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <button 
+            className="chatroom-send-button" 
+            onClick={handleSendMessage}
+            // disabled={chatDisabled}
+          >
+            Send
+          </button>
+        </div>
+      )}
 
       {isVoting && (
         <VotingPopup

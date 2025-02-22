@@ -18,7 +18,7 @@ const { getLobby } = require('./lobbyService');
  * @returns {array} - Array of role strings.
  */
 function determineRoles(playerCount) {
-  if (playerCount < 6 || playerCount > 20) {
+  if (playerCount < 2 || playerCount > 20) {
     throw new Error('Player count must be between 6 and 20.');
   }
 
