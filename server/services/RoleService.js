@@ -9,6 +9,10 @@ Provide role-specific logic (e.g., Mafia actions).
 
 */
 
+const { 
+  MIN_PLAYERS, MAX_PLAYERS, TWO_MAFIA_LIMIT, 
+  THREE_MAFIA_LIMIT, TWO_DOC_LIMIT, TWO_DET_LIMIT 
+} = require("../constants")
 const { getLobby } = require('./lobbyService');
 
 /**
@@ -18,7 +22,7 @@ const { getLobby } = require('./lobbyService');
  * @returns {array} - Array of role strings.
  */
 function determineRoles(playerCount) {
-  if (playerCount < 6 || playerCount > 20) {
+  if (playerCount < MIN_PLAYERS || playerCount > MAX_PLAYERS) {
     throw new Error('Player count must be between 6 and 20.');
   }
 
@@ -26,25 +30,25 @@ function determineRoles(playerCount) {
 
   // Assign Mafia: 1 Mafia for 6-9 players, scaling to 5 Mafia for 20 players
   let mafiaCount = 1; // Default for 6-9 players
-  if (playerCount >= 10 && playerCount < 15) {
+  if (playerCount >= TWO_MAFIA_LIMIT && playerCount < TWO_MAFIA_LIMIT+5) { // 2 mafia if between 10-14 players
     mafiaCount = 2;
-  } else if (playerCount >= 15 && playerCount < 20) {
+  } else if (playerCount >= THREE_MAFIA_LIMIT && playerCount < THREE_MAFIA_LIMIT+5) { // 3 mafia if between 15-19 players
     mafiaCount = 3;
-  } else if (playerCount === 20) {
+  } else if (playerCount === MAX_PLAYERS) {
     mafiaCount = 5;
   }
   roles.push(...Array(mafiaCount).fill('Mafia'));
 
   // Assign Detective: 1 Detective for 6-10 players, scaling to 2 for 11-20 players
   let detectiveCount = 1;
-  if (playerCount >= 11) {
+  if (playerCount >= TWO_DOC_LIMIT) {
     detectiveCount = 2;
   }
   roles.push(...Array(detectiveCount).fill('Detective'));
 
   // Assign Doctor: 1 Doctor for 6-10 players, scaling to 2 for 11-20 players
   let doctorCount = 1;
-  if (playerCount >= 11) {
+  if (playerCount >= TWO_DET_LIMIT) {
     doctorCount = 2;
   }
   roles.push(...Array(doctorCount).fill('Doctor'));
