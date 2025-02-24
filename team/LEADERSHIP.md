@@ -9,3 +9,11 @@
 | Fri 01/17 | Hung Khuu         | Led the standup for the lab01                                   | 
 | Wed 01/22 | Andy Subramanian  | Led team discussion of tech stacks and learning plan            | 
 | Fri 01/24 | Victor Prchlik    | Will lead the discussion to finalize the definition of our MVP  | 
+
+Albert: Product Owner, Testing/QA Coordinator
+Andy: Deployment Document Coordinator
+Tyler: Final Presentation Leader
+Victor: Retro3
+Hung: User Manual Coordintor
+Shivani: UX Coordinator, Design Document Coordinator
+Priyanka: Scrum
