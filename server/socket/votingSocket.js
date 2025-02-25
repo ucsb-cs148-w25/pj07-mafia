@@ -11,6 +11,8 @@ function initVotingSocket(io) {
 
     // Start a vote
     socket.on("start_vote", ({ lobbyId, voteType }) => {
+      socket.join(lobbyId);
+
       console.log(`[VOTING] Vote started for ${voteType} in lobby ${lobbyId}`);
       const voteId = VotingService.startVoting(lobbyId, voteType);
 
@@ -26,10 +28,11 @@ function initVotingSocket(io) {
       }
 
       const latest = votingSessions[votingSessions.length - 1];
+      
       io.to(lobbyId).emit("open_voting", {
         voteType,
         voteId,
-        players: Array.from(latest.players),
+        players: Array.from(latest.players)
       });
 
       // Optional 30s timer to auto-end
@@ -38,11 +41,14 @@ function initVotingSocket(io) {
         if (session) {
           console.log("[VOTING] Time limit reached. Closing voting session.");
           const eliminatedPlayer = VotingService.endVoting(lobbyId, voteId);
+          const msg = session.voteType === 'mafia'
+                    ? `Player ${eliminatedPlayer} was eliminated by Mafia!`
+                    : `Player ${eliminatedPlayer} was eliminated by majority vote!`;
           io.to(lobbyId).emit("voting_complete", { eliminated: eliminatedPlayer });
           if (eliminatedPlayer) {
             io.to(lobbyId).emit("message", {
               sender: "System",
-              text: `Player ${eliminatedPlayer} was eliminated!`,
+              text: msg,
               timestamp: new Date()
             });
           }
@@ -52,6 +58,8 @@ function initVotingSocket(io) {
 
     // Submit a vote
     socket.on("submit_vote", ({ lobbyId, voteId, voter, target }) => {
+      socket.join(lobbyId);
+      
       if (!lobbyId || !voteId || !voter || !target) {
         console.warn("[VOTING] Incomplete vote submission.");
         return;
@@ -64,11 +72,13 @@ function initVotingSocket(io) {
         // Everyone has voted
         const eliminated = VotingService.endVoting(lobbyId, voteId);
         io.to(lobbyId).emit("voting_complete", { eliminated });
-
+        const msg = session.voteType === 'mafia'
+                    ? `Player ${eliminated} was eliminated by Mafia!`
+                    : `Player ${eliminated} was eliminated by majority vote!`;
         if (eliminated) {
           io.to(lobbyId).emit("message", {
             sender: "System",
-            text: `Player ${eliminated} was eliminated by majority vote!`,
+            text: msg,
             timestamp: new Date()
           });
         }

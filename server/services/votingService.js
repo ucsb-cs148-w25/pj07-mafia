@@ -38,7 +38,6 @@ function startVoting(lobbyId, voteType) {
 
   // Build the list of who can vote
   if (voteType === "mafia") {
-    // only mafia + alive + not in eliminatedPlayers
     lobby.players.forEach((player) => {
       if (!player.isAlive) {
         console.log(`[DEBUG] Skipping ${player.username} (not alive).`);
@@ -48,10 +47,9 @@ function startVoting(lobbyId, voteType) {
         console.log(`[DEBUG] Skipping ${player.username} (already eliminated).`);
         return;
       }
-      if (player.role && player.role.toLowerCase() === "mafia") {
+      if (player.role && player.role.toLowerCase() !== "mafia") {
+        // prevent mafia voting mafia in a multi-mafia scenario
         newSession.players.add(player.username);
-      } else {
-        console.log(`[DEBUG] Skipping ${player.username} (not mafia).`);
       }
     });
   } else {
@@ -73,7 +71,7 @@ function startVoting(lobbyId, voteType) {
   votingSessions[lobbyId].push(newSession);
 
   console.log(
-    `[VOTING] New voting session started in lobby ${lobbyId} (Type: ${voteType}). Eligible voters:`,
+    `[VOTING] New voting session started in lobby ${lobbyId} (Type: ${voteType}). Players to vote:`,
     Array.from(newSession.players)
   );
 
@@ -94,7 +92,10 @@ function castVote(lobbyId, voteId, voter, target) {
   }
 
   // Validate voter & target
-  if (!session.players.has(voter) || !session.players.has(target)) {
+  // when mafia vote, votingSession does not contain mafia by default
+  if ((!session.players.has(voter) && session.voteType !== "mafia") || !session.players.has(target)) {
+    console.log(`[DEBUG] hasVoter: ${session.players.has(voter)}`)
+    console.log(`[DEBUG] hasTarget: ${session.players.has(target)}`)
     console.warn(`[VOTING] Invalid vote: ${voter} -> ${target} not recognized in session ${voteId}.`);
     return;
   }
