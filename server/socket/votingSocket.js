@@ -68,7 +68,7 @@ function initVotingSocket(io) {
       VotingService.castVote(lobbyId, voteId, voter, target);
 
       const session = VotingService.getSession(lobbyId, voteId);
-      if (session && Object.keys(session.votes).length === session.players.size) {
+      if (session && Object.keys(session.votes).length === session.voters.size) {
         // Everyone has voted
         const eliminated = VotingService.endVoting(lobbyId, voteId);
         io.to(lobbyId).emit("voting_complete", { eliminated });

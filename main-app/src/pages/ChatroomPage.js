@@ -156,7 +156,6 @@ const ChatroomPage = () => {
       debugLog("voting_complete", { eliminated });
       setIsVoting(false);
       setIsVoteLocked(false);
-      console.log(`[CHATROOM CHECK] ${eliminated}`)
       if (eliminated === username) {
         setIsEliminated(true);
       }

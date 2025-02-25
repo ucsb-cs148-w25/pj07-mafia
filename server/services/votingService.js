@@ -36,43 +36,35 @@ function startVoting(lobbyId, voteType) {
     role: p.role
   })));
 
-  // Build the list of who can vote
   if (voteType === "mafia") {
-    lobby.players.forEach((player) => {
-      if (!player.isAlive) {
-        console.log(`[DEBUG] Skipping ${player.username} (not alive).`);
-        return;
-      }
-      if (eliminatedPlayers[lobbyId].has(player.username)) {
-        console.log(`[DEBUG] Skipping ${player.username} (already eliminated).`);
-        return;
-      }
-      if (player.role && player.role.toLowerCase() !== "mafia") {
-        // prevent mafia voting mafia in a multi-mafia scenario
+    // Populate candidates: maybe every player except eliminated ones
+    lobby.players.forEach(player => {
+      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
         newSession.players.add(player.username);
       }
     });
+
+    // Populate voters: only mafia members should vote
+    lobby.players.forEach(player => {
+      if (player.isAlive &&
+          !eliminatedPlayers[lobbyId].has(player.username) &&
+          player.role && player.role.toLowerCase() === "mafia") {
+        newSession.voters.add(player.username);
+      }
+    });
   } else {
-    // villager vote => all alive, non-eliminated players
-    lobby.players.forEach((player) => {
-      if (!player.isAlive) {
-        console.log(`[DEBUG] Skipping ${player.username} (not alive).`);
-        return;
+    lobby.players.forEach(player => {
+      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+        newSession.players.add(player.username);
+        newSession.voters.add(player.username);
       }
-      if (eliminatedPlayers[lobbyId].has(player.username)) {
-        console.log(`[DEBUG] Skipping ${player.username} (already eliminated).`);
-        return;
-      }
-      // For "villager," we do NOT check role. So a new joiner with no role is still included if alive.
-      newSession.players.add(player.username);
     });
   }
-
   votingSessions[lobbyId].push(newSession);
 
   console.log(
-    `[VOTING] New voting session started in lobby ${lobbyId} (Type: ${voteType}). Players to vote:`,
-    Array.from(newSession.players)
+    `[VOTING] New voting session started in lobby ${lobbyId} (Type: ${voteType}). \n\tPlayers to vote:`,
+    `${Array.from(newSession.players)}\n\tVoters: ${Array.from(newSession.voters)}`
   );
 
   return voteId;
