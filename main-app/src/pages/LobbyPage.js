@@ -97,7 +97,7 @@ function LobbyPage() {
     e.preventDefault();
     if (username.trim() !== "") {
       setIsUsernameSet(true);
-      localStorage.setItem("username", username.trim());
+      sessionStorage.setItem("username", username.trim());
     } else {
       alert("Please enter a valid username.");
     }

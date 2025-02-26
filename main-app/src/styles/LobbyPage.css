@@ -1,5 +1,10 @@
 /* LobbyPage.css */
 
+@font-face {
+  font-family: 'gothic';
+  src: url('mirage.ttf') format('truetype');
+}
+
 /* Page container */
 .lobby-container {
   min-height: 100vh;
@@ -24,9 +29,10 @@
 /* Heading */
 .lobby-heading {
   margin-bottom: 1.75rem;
-  font-size: 2.25rem;
+  font-size: 3rem;
   color: #f9ecd2; /* Beige/Off-white, same as HomePage */
   text-shadow: 4px 4px 2px rgb(12, 0, 0); /* Same text shadow as HomePage */
+  letter-spacing: 3px;
 }
 
 /* Input field */
@@ -55,7 +61,8 @@
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out; /* Same transitions */
-  font-family: 'serif'; /* Serif font */
+  font-family: 'gothic';
+  letter-spacing: 2px;
 }
 
 .lobby-button:hover {
