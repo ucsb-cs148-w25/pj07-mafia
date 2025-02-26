@@ -25,11 +25,35 @@
 - **Usefulness:** The tool provided guidance on best practices for structuring test files, ensuring consistency across backend and frontend tests. This saved time and reduced uncertainty about where files should be placed.  
 - **Ensuring Correctness & Fair Use:** I consulted the AI instead of deciding on my own because it has been trained on a vast dataset, having encountered numerous codebases across different industries. This broad exposure allows it to provide insights into **how professional developers typically structure their tests**, ensuring that our setup aligns with industry best practices.  
 
-Team Member Hung Khuu:
+## Team Member: Hung Khuu
+
 1. AI Tools Used: ChatGPT 4o
 2. Outcomes: ChatGPT helped me provide an outline of the backend structure to properly implement day/night phase management in our game. It suggested things like storing the phase states in the model file, handling all sockets stuff on our server side and not having the timer be in the frontend because its good to have the timer be universal for all clients. It provided a good prototype for how voting should work and how we should layout our files such that we can code each thing on our own in a way that is organized and not too messy for others.
 3. Reflections: It was good to quickly learn how to organize based off what it thinks would work best for everyone. It also provided alot of architecture clarity that I could relay to the rest of the group quickly in detailed explanations. However, it was still important that I verified the code snippets because the AI does not know my entire codebase and could make things up about it from variable names to libaries that I do not use. One way to ensure it provides good results is to explain my issue, send in all relevant code, and then ask it to explain to me clearly each step and its reasoning.
 4. Going forward: Looking towards the future I think ChatGPT is good for coming up with things that we do not want to do like comments or architecture explanations or guidance but when it comes to the details its not as good and you have to provide it alot of guidance.
+   
+## Team Member: PRIYANKA 
+
+**AI Tool Utilized:** ChatGPT
+
+**Ouctomes Produced:** 
+Produced sample documentation for select frontend files. 
+
+**Reflections:**
+- **Usefulness:** It was fairly effective in understanding the purpose of our code and defining major variables/functions. It also had the potential to provide detailed documentation if asked to.
+- **Ensuring Correctness & Fair Use:** The only real way was to sanity check and make sure that everything aligned with our intent.
+- **Going Forward:** I definitely think it's useful but I think sanity checking will have to be done for every line written because sometimes it makes assumptions that may make sense for the specific file but maybe not in the context of our entire codebase and that is knowledge that only we have. 
+
+## Team Member: Shivani
+
+**AI Tool Utilized:** Gemini
+
+**Outcomes Produced:** Helped me implement my ideas for revising the UI of our web app.
+
+**Reflections:**
+- **Usefulness:** This AI tool was helpful in updating our .css files and changing the overall look of our web app, making it more aesthetically pleasing according to the instructions I gave it. It helped me implement certain concepts I was unclear on how to do myself, such as making a radial gradient background and adding a shadow behind text. 
+- **Ensuring Correctness & Fair Use:** The way I ensured that the AI was providing correct information was by testing the code snippets it gave me and seeing if it matched the descriptions I gave. If it wasn't completely accurate in its suggestions, I prompted it further and kept asking it to revise until I was satisfied with the updated appearance of our web app.
+- **Going Forward:** I think Gemini will be very useful in helping us maintain an appealing UI for our web app, as I've found it works better than other AI tools such as ChatGPT. I will continue to use it throughout the rest of this project to revise the appearance of our product.
 
 ## Team Member: Tyler
 

@@ -3,6 +3,11 @@
 ## About Our Project:
 A digital platform for playing Mafia, where LLMs secretly take on player roles, and human players earn bonus points by identifying the AI.
 
+## Deployed Link:
+
+http://mafia.dokku-07.cs.ucsb.edu
+
+
 ## Team Members
 
 | Name                  | Git ID                  |
