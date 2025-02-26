@@ -1,7 +1,7 @@
 // main-app/src/services/socket.js
 import { io } from "socket.io-client";
 
-const backendUrl = "http://localhost:5000";
+const backendUrl = "https://mafia-backend.dokku-07.cs.ucsb.edu" || "http://localhost:4000";
 
 const socket = io(backendUrl, {
   autoConnect: true,
