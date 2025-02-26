@@ -39,19 +39,21 @@ function determineRoles(playerCount) {
   }
   roles.push(...Array(mafiaCount).fill('Mafia'));
 
-  // Assign Detective: 1 Detective for 6-10 players, scaling to 2 for 11-20 players
-  let detectiveCount = 1;
-  if (playerCount >= TWO_DOC_LIMIT) {
-    detectiveCount = 2;
-  }
-  roles.push(...Array(detectiveCount).fill('Detective'));
+  if (MIN_PLAYERS > 2) {
+    // Assign Detective: 1 Detective for 6-10 players, scaling to 2 for 11-20 players
+    let detectiveCount = 1;
+    if (playerCount >= TWO_DOC_LIMIT) {
+      detectiveCount = 2;
+    }
+    roles.push(...Array(detectiveCount).fill('Detective'));
 
-  // Assign Doctor: 1 Doctor for 6-10 players, scaling to 2 for 11-20 players
-  let doctorCount = 1;
-  if (playerCount >= TWO_DET_LIMIT) {
-    doctorCount = 2;
+    // Assign Doctor: 1 Doctor for 6-10 players, scaling to 2 for 11-20 players
+    let doctorCount = 1;
+    if (playerCount >= TWO_DET_LIMIT) {
+      doctorCount = 2;
+    }
+    roles.push(...Array(doctorCount).fill('Doctor'));
   }
-  roles.push(...Array(doctorCount).fill('Doctor'));
 
   // Fill the rest with Villagers
   const totalAssigned = roles.length;
