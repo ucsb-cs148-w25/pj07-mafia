@@ -20,8 +20,10 @@ const ChatroomPage = () => {
   // Phase/time states
   const [currentPhase, setCurrentPhase] = useState("day");
   const [timeLeft, setTimeLeft] = useState(0);
+  const [votingInitiated, setVotingInitiated] = useState(false);
 
   // Voting states
+  const currentUsernameRef = useRef(sessionStorage.getItem("username"));
   const [isVoting, setIsVoting] = useState(false);
   const [voteType, setVoteType] = useState("villager");
   const [voteId, setVoteId] = useState(null);
@@ -32,11 +34,16 @@ const ChatroomPage = () => {
 
   // 1. Load username
   useEffect(() => {
-    const stored = localStorage.getItem("username");
+    const stored = sessionStorage.getItem("username");
     if (stored) setUsername(stored);
     else navigate("/");
   }, [navigate]);
-
+  // Sync currentUsernameRef with the username state
+  useEffect(() => {
+    if (username) {
+      currentUsernameRef.current = username;
+    }
+  }, [username]);
   // 2. Listen for roleAssigned
   useEffect(() => {
     const handleRoleAssigned = (data) => {
@@ -94,11 +101,6 @@ const ChatroomPage = () => {
       debugLog("phaseUpdate", { phase, timeLeft });
       setCurrentPhase(phase);
       setTimeLeft(timeLeft);
-
-      if (phase === "day" || phase === "night") {
-        setIsVoting(false);
-        setIsVoteLocked(false);
-      }
     };
     socket.on("phaseUpdate", handlePhaseUpdate);
     return () => {
@@ -106,13 +108,22 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 7. Start Voting
-  const handleStartVoting = () => {
-    setIsVoting(false);
-    setIsVoteLocked(false);
-    debugLog("StartVoting button clicked", { voteType, lobbyId });
-    socket.emit("start_vote", { voteType, lobbyId });
-  };
+  // 7. automated voting popup
+  useEffect(() => {
+    if (isEliminated) {
+      console.log(`[CHATROOM] this user is eliminated`)
+      return;
+    }
+    // Check if the current phase qualifies for auto vote initiation
+    if ((currentPhase === "night" || currentPhase === "voting")) {
+        setVotingInitiated(true)
+        console.log("[DEBUG] inside the phase validator", {votingInitiated})
+        const voteTypeToEmit =
+            currentPhase === "night" ? "mafia" : "villager";
+        console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
+        socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+    }
+  }, [currentPhase, role, lobbyId, isEliminated, votingInitiated]);
 
   // 8. open_voting / voting_complete
   useEffect(() => {
@@ -122,7 +133,10 @@ const ChatroomPage = () => {
       setVoteId(incId);
 
       // remove yourself from the target list if you don't want self votes
-      const filtered = incPlayers.filter(p => p !== username);
+      const filtered = incPlayers.filter(
+        (playerUsername) =>
+          playerUsername.trim().toLowerCase() !== username.trim().toLowerCase()
+      );
       setPlayers(filtered);
 
       if (incType === "mafia") {
@@ -142,7 +156,6 @@ const ChatroomPage = () => {
       debugLog("voting_complete", { eliminated });
       setIsVoting(false);
       setIsVoteLocked(false);
-
       if (eliminated === username) {
         setIsEliminated(true);
       }
@@ -178,28 +191,10 @@ const ChatroomPage = () => {
   return (
     <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""}`}>
       <div className="chatroom-header">
-        <h2>{currentPhase.toUpperCase()}</h2>
+        <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
         <button className="back-button" onClick={() => navigate("/")}>Back to Home</button>
 
         <div className="phase-timer">{formatTime(timeLeft)}</div>
-
-        <div className="voting-controls">
-          {(currentPhase === "night" || currentPhase === "voting") && role?.toLowerCase() === "mafia" && (
-            <select value={voteType} onChange={(e) => setVoteType(e.target.value)}>
-              <option value="villager">Villager Vote</option>
-              <option value="mafia">Mafia Kill</option>
-            </select>
-          )}
-          {((currentPhase === "night" && role?.toLowerCase() === "mafia") || currentPhase === "voting") && (
-            <button
-              onClick={handleStartVoting}
-              disabled={currentPhase !== "voting" || isEliminated}
-              className={`${role?.toLowerCase() === "mafia" ? "mafia-player" : "villager-player"}`}>
-              Start Voting
-            </button>
-          )}
-
-        </div>
       </div>
 
       {role && (
@@ -243,7 +238,7 @@ const ChatroomPage = () => {
         </div>
       )}
 
-      {isVoting && (
+      {isVoting && !isEliminated && (
         <VotingPopup
           players={players}
           onVote={(targetPlayer) => {
