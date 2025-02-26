@@ -3,6 +3,7 @@
  Listens for "start_vote" and "submit_vote" from the client. 
  Uses VotingService to handle the logic, then broadcasts events to the lobby.
 */
+const { VOTING_DURATION } = require("../constants");
 const VotingService = require("../services/votingService");
 
 function initVotingSocket(io) {
@@ -47,7 +48,7 @@ function initVotingSocket(io) {
             });
           }
         }
-      }, 30000);
+      }, VOTING_DURATION * 1000);
     });
 
     // Submit a vote
