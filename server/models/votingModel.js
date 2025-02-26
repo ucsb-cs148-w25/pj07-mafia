@@ -12,6 +12,7 @@ class VotingSession {
       this.voteId = voteId; // Unique identifier for each voting session
       this.voteType = voteType; // "villager" or "mafia"
       this.players = new Set(); // Players participating in this vote
+      this.voters = new Set();  // Voters in this vote
       this.votes = {}; // { voterUsername: targetUsername }
       this.hasEnded = false;
     }

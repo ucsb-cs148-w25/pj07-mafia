@@ -2,6 +2,7 @@
 import { io } from "socket.io-client";
 
 const backendUrl = "https://mafia-backend.dokku-07.cs.ucsb.edu" || "http://localhost:4000";
+// const backendUrl = "http://localhost:5001";
 
 const socket = io(backendUrl, {
   autoConnect: true,

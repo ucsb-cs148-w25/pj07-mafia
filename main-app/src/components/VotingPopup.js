@@ -32,15 +32,12 @@ const VotingPopup = ({
     console.log("[DEBUG POPUP] Received players list in VotingPopup:", players);
   }, [players]);
 
-  // Filter out the current user
-  const filteredPlayers = players.filter(
-    (player) => String(player) !== String(username)
-  );
+  const filteredPlayers = players
 
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "Mafia Kill (Night)" : "Villager Vote (Day)"}
+        {role === "Mafia" ? "KILL" : "VOTE"}
       </h3>
 
       <select
