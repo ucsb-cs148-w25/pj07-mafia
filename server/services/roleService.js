@@ -1,5 +1,5 @@
 /*
-roleService.js
+RoleService.js
 Description:
 Handles role assignment and management during the game.
 Key Responsibilities:
