@@ -85,12 +85,13 @@ function castVote(lobbyId, voteId, voter, target) {
 
   // Validate voter & target
   // when mafia vote, votingSession does not contain mafia by default
-  if ((!session.players.has(voter) && session.voteType !== "mafia") || !session.players.has(target)) {
-    console.log(`[DEBUG] hasVoter: ${session.players.has(voter)}`)
-    console.log(`[DEBUG] hasTarget: ${session.players.has(target)}`)
-    console.warn(`[VOTING] Invalid vote: ${voter} -> ${target} not recognized in session ${voteId}.`);
-    return;
-  }
+  if ((!session.players.has(voter) && session.voteType !== "mafia") || 
+        (target !== "s3cr3t_1nv1s1bl3_pl@y3r" && !session.players.has(target))) {
+      console.log(`[DEBUG] hasVoter: ${session.players.has(voter)}`)
+      console.log(`[DEBUG] hasTarget: ${session.players.has(target)}`)
+      console.warn(`[VOTING] Invalid vote: ${voter} -> ${target} not recognized in session ${voteId}.`);
+      return;
+    }
 
   session.votes[voter] = target;
   console.log(`[VOTING] ${voter} voted for ${target} in session ${voteId} (Lobby ${lobbyId}).`);
@@ -106,24 +107,32 @@ function calculateResults(lobbyId, voteId) {
   }
 
   let maxVotes = 0;
-  let candidates = [];
-  for (const [player, count] of Object.entries(voteCounts)) {
+  let candidate = null;
+  let tie = false;
+
+  // Determine which candidate received the highest number of votes
+  for (const [target, count] of Object.entries(voteCounts)) {
+    console.log("[VOTING SERVICE]", target, count)
+    if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
     if (count > maxVotes) {
       maxVotes = count;
-      candidates = [player];
+      candidate = target;
+      tie = false;
     } else if (count === maxVotes) {
-      candidates.push(player);
+      tie = true;
     }
   }
 
-  // Tie or no majority => null
-  if (candidates.length !== 1) {
-    console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended with a tie or no majority.`);
+  // If there is a tie or the winner is the secret token, no one is eliminated.
+  if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r") {
+    console.log(
+      `[VOTING] session ${voteId} in lobby ${lobbyId} ended with a tie or abstention.`
+    );
     return null;
   }
 
-  console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidates[0]}`);
-  return candidates[0];
+  console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidate}`);
+  return candidate;
 }
 
 function endVoting(lobbyId, voteId) {

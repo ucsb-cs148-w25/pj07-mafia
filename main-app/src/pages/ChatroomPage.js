@@ -116,10 +116,9 @@ const ChatroomPage = () => {
     }
     // Check if the current phase qualifies for auto vote initiation
     if ((currentPhase === "night" || currentPhase === "voting")) {
-        setVotingInitiated(true)
         console.log("[DEBUG] inside the phase validator", {votingInitiated})
         const voteTypeToEmit =
-            currentPhase === "night" ? "mafia" : "villager";
+            currentPhase === "voting" ? "villager" : "mafia";
         console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
         socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
     }
@@ -252,7 +251,17 @@ const ChatroomPage = () => {
             // Immediately close popup => no duplicates
             setIsVoting(false);
           }}
-          onClose={() => setIsVoting(false)}
+          onClose={() => {
+            // Treat cancellation as a vote with a default target value (e.g., "abstain")
+            debugLog(`Vote cancelled by ${username}`);
+            socket.emit("submit_vote", {
+              lobbyId,
+              voteId,
+              voter: username,
+              target: "s3cr3t_1nv1s1bl3_pl@y3r",
+            });
+            setIsVoting(false);
+          }}
           role={voteType === "mafia" ? "Mafia" : "Villager"}
           username={username}
           lobbyId={lobbyId}
