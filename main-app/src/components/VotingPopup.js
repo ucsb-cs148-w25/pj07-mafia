@@ -34,11 +34,41 @@ const VotingPopup = ({
 
   const filteredPlayers = players
 
+  // Get the appropriate action text based on role
+  const getActionText = () => {
+    switch(role) {
+      case "Mafia":
+        return "KILL";
+      case "Doctor":
+        return "SAVE";
+      case "Detective":
+        return "INVESTIGATE";
+      default:
+        return "VOTE";
+    }
+  };
+
+  // Get the appropriate prompt text based on role
+  const getPromptText = () => {
+    switch(role) {
+      case "Mafia":
+        return "Select a player to eliminate:";
+      case "Doctor":
+        return "Select a player to save:";
+      case "Detective":
+        return "Select a player to investigate:";
+      default:
+        return "Vote to eliminate:";
+    }
+  };
+
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "KILL" : "VOTE"}
+        {getActionText()}
       </h3>
+      
+      <p>{getPromptText()}</p>
 
       <select
         value={selectedPlayer}
@@ -72,7 +102,7 @@ const VotingPopup = ({
         }}
         disabled={voteSubmitted || !selectedPlayer}
       >
-        Submit Vote
+        Submit
       </button>
 
       <button onClick={onClose} disabled={voteSubmitted}>

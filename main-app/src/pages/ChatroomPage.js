@@ -61,15 +61,25 @@ const ChatroomPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 4. Listen for message
+  // 4. Listen for message and private_message
   useEffect(() => {
     const handleMessage = (m) => {
       debugLog("message", m);
       setMessages(prev => [...prev, m]);
     };
+    
+    const handlePrivateMessage = (m) => {
+      debugLog("private_message", m);
+      // Add a class or styling to indicate this is a private message
+      setMessages(prev => [...prev, { ...m, isPrivate: true }]);
+    };
+    
     socket.on("message", handleMessage);
+    socket.on("private_message", handlePrivateMessage);
+    
     return () => {
       socket.off("message", handleMessage);
+      socket.off("private_message", handlePrivateMessage);
     };
   }, []);
 
@@ -114,13 +124,34 @@ const ChatroomPage = () => {
       console.log(`[CHATROOM] this user is eliminated`)
       return;
     }
+    
     // Check if the current phase qualifies for auto vote initiation
-    if ((currentPhase === "night" || currentPhase === "voting")) {
-        console.log("[DEBUG] inside the phase validator", {votingInitiated})
-        const voteTypeToEmit =
-            currentPhase === "voting" ? "villager" : "mafia";
-        console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
-        socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+    if (currentPhase === "voting") {
+      // Day voting phase - everyone votes
+      console.log("[DEBUG] Initiating day voting");
+      socket.emit("start_vote", { voteType: "villager", lobbyId });
+    }
+    else if (currentPhase === "night") {
+      // Night phase - role-specific votes
+      if (role) {
+        const lowerRole = role.toLowerCase();
+        
+        // For mafia members
+        if (lowerRole === "mafia") {
+          console.log("[DEBUG] Initiating mafia voting");
+          socket.emit("start_vote", { voteType: "mafia", lobbyId });
+        }
+        // For doctors
+        else if (lowerRole === "doctor") {
+          console.log("[DEBUG] Initiating doctor voting");
+          socket.emit("start_vote", { voteType: "doctor", lobbyId });
+        }
+        // For detectives
+        else if (lowerRole === "detective") {
+          console.log("[DEBUG] Initiating detective voting");
+          socket.emit("start_vote", { voteType: "detective", lobbyId });
+        }
+      }
     }
   }, [currentPhase, role, lobbyId, isEliminated, votingInitiated]);
 
@@ -128,34 +159,65 @@ const ChatroomPage = () => {
   useEffect(() => {
     const handleOpenVoting = ({ voteType: incType, voteId: incId, players: incPlayers }) => {
       debugLog("open_voting", { incType, incId, incPlayers });
-      setVoteType(incType);
-      setVoteId(incId);
-
+      
       // remove yourself from the target list if you don't want self votes
       const filtered = incPlayers.filter(
         (playerUsername) =>
           playerUsername.trim().toLowerCase() !== username.trim().toLowerCase()
       );
-      setPlayers(filtered);
-
-      if (incType === "mafia") {
-        // only mafia sees the popup
-        if (role && role.toLowerCase() === "mafia") {
-          setIsVoting(true);
-        } else {
-          setIsVoteLocked(true);
-        }
-      } else {
-        // villager => everyone can vote
+      
+      // Show voting popup based on role and vote type
+      // Only show the popup to the appropriate role
+      if (incType === "mafia" && role && role.toLowerCase() === "mafia") {
+        // Only mafia sees the popup for mafia votes
+        setVoteType(incType);
+        setVoteId(incId);
+        setPlayers(filtered);
         setIsVoting(true);
+      } 
+      else if (incType === "doctor" && role && role.toLowerCase() === "doctor") {
+        // Only doctor sees the popup for doctor votes
+        setVoteType(incType);
+        setVoteId(incId);
+        setPlayers(filtered);
+        setIsVoting(true);
+      }
+      else if (incType === "detective" && role && role.toLowerCase() === "detective") {
+        // Only detective sees the popup for detective votes
+        setVoteType(incType);
+        setVoteId(incId);
+        setPlayers(filtered);
+        setIsVoting(true);
+      } 
+      else if (incType === "villager") {
+        // villager => everyone can vote
+        setVoteType(incType);
+        setVoteId(incId);
+        setPlayers(filtered);
+        setIsVoting(true);
+      }
+      else {
+        // Voting is happening but not for this role
+        setIsVoteLocked(true);
       }
     };
 
-    const handleVotingComplete = ({ eliminated }) => {
-      debugLog("voting_complete", { eliminated });
-      setIsVoting(false);
+    const handleVotingComplete = (result) => {
+      debugLog("voting_complete", result);
+      
+      // Only reset voting state if it matches the user's current vote type
+      if (!result || !result.type || result.type === voteType) {
+        setIsVoting(false);
+      }
+      
+      // Always reset vote lock regardless of vote type
       setIsVoteLocked(false);
-      if (eliminated === username) {
+      
+      // Handle different vote type results
+      if (result && result.type === "mafia" && result.eliminated === username) {
+        setIsEliminated(true);
+      }
+      else if (result && result.type === "villager" && result.eliminated === username) {
         setIsEliminated(true);
       }
     };
@@ -204,7 +266,7 @@ const ChatroomPage = () => {
 
       <div className="chatroom-messages">
         {messages.map((m, idx) => (
-          <div key={idx} className="chatroom-message">
+          <div key={idx} className={`chatroom-message ${m.isPrivate ? 'private-message' : ''}`}>
             <span className="chatroom-username">{m.sender}: </span>
             <span className="chatroom-text">{m.text}</span>
           </div>
@@ -262,7 +324,15 @@ const ChatroomPage = () => {
             });
             setIsVoting(false);
           }}
-          role={voteType === "mafia" ? "Mafia" : "Villager"}
+          role={
+            voteType === "mafia" 
+              ? "Mafia" 
+              : voteType === "doctor" 
+                ? "Doctor" 
+                : voteType === "detective" 
+                  ? "Detective" 
+                  : "Villager"
+          }
           username={username}
           lobbyId={lobbyId}
         />

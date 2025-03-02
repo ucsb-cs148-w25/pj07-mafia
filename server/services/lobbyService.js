@@ -16,6 +16,9 @@ const {
   MAX_PLAYERS 
 } = require('../constants'); 
 
+// Circular dependency workaround - we'll require VotingService later
+let VotingService;
+
 const lobbies = {};
 let io = null;
 
@@ -105,10 +108,21 @@ function startDayNightCycle(lobbyId) {
       clearInterval(lobby.timer);
       lobby.timer = null;
 
+      // Phase transition
       switch (lobby.phase) {
-        case "day": lobby.phase = "voting"; break;
-        case "voting": lobby.phase = "night"; break;
-        case "night": lobby.phase = "day"; break;
+        case "day": 
+          lobby.phase = "voting"; 
+          break;
+        case "voting": 
+          // Going into night phase - reset night phase vote tracking
+          lobby.phase = "night"; 
+          if (typeof VotingService !== 'undefined' && VotingService.initializeNightPhaseVotes) {
+            VotingService.initializeNightPhaseVotes(lobbyId);
+          }
+          break;
+        case "night": 
+          lobby.phase = "day"; 
+          break;
       }
       startDayNightCycle(lobbyId);
     }
@@ -162,3 +176,6 @@ module.exports = {
   startDayNightCycle,
   removePlayer,
 };
+
+// Resolve circular dependency after exports
+VotingService = require('./votingService');

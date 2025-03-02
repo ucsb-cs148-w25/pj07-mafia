@@ -80,6 +80,19 @@
   color: #110101;
 }
 
+/* Private message styling */
+.private-message {
+  background-color: rgba(173, 216, 230, 0.15);
+  padding: 8px;
+  border-radius: 4px;
+  border-left: 3px solid #4b6bff;
+}
+
+.night-mode .private-message {
+  background-color: rgba(75, 107, 255, 0.1);
+  border-left: 3px solid #6b8bff;
+}
+
 /* Username */
 .chatroom-username {
   font-weight: bold;
