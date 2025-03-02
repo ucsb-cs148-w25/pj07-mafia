@@ -111,6 +111,9 @@
   font-size: 1rem;
   font-family: serif;
   color: #110101;
+  resize: none;
+  overflow-y: auto;
+  max-height: 100px;
 }
 
 /* Send button */
@@ -256,6 +259,41 @@
 
 .night-mode .voting-controls button.mafia-player:hover {
   background-color: #5f0903;
+}
+
+/* Fade in/out animation for the elimination message */
+.elimination-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'gothic';
+  font-size: 2rem;
+  color: red;
+  z-index: 1000;
+  opacity: 0;
+  white-space: nowrap;
+  text-align: center;
+  animation: fadeInOut 6s forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Dim the entire chatroom when eliminated */
+.chatroom-container.eliminated {
+  filter: brightness(0.43) !important;
+}
+
+/* Disable pointer events for the input area when eliminated */
+.chatroom-input-container.disabled {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
 }
 
 /* .night-mode .role-banner {

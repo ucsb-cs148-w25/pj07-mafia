@@ -29,6 +29,7 @@ const ChatroomPage = () => {
   const [voteId, setVoteId] = useState(null);
   const [players, setPlayers] = useState([]);
   const [isVoteLocked, setIsVoteLocked] = useState(false);
+  const [showEliminationMessage, setShowEliminationMessage] = useState(false);
 
   const debugLog = (msg, data = null) => console.log(`[DEBUG] ${msg}`, data);
 
@@ -152,11 +153,18 @@ const ChatroomPage = () => {
     };
 
     const handleVotingComplete = ({ eliminated }) => {
-      debugLog("voting_complete", { eliminated });
+      debugLog("voting_complete", { eliminated, username});
       setIsVoting(false);
       setIsVoteLocked(false);
-      if (eliminated === username) {
-        setIsEliminated(true);
+      if (eliminated){
+        if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
+          setIsEliminated(true);
+          console.log("[DEBUG] Set IsEliminated to True")
+          setShowEliminationMessage(true);
+          setTimeout(() => {
+            setShowEliminationMessage(false);
+          }, 6000);
+        }
       }
     };
 
@@ -188,10 +196,10 @@ const ChatroomPage = () => {
   };
 
   return (
-    <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""}`}>
+    <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""} ${isEliminated ? "eliminated" : ""}`}>
       <div className="chatroom-header">
         <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
-        <button className="back-button" onClick={() => navigate("/")}>Back to Home</button>
+        {/* <button className="back-button" onClick={() => navigate("/")}>Back to Home</button> */}
 
         <div className="phase-timer">{formatTime(timeLeft)}</div>
       </div>
@@ -213,10 +221,10 @@ const ChatroomPage = () => {
       </div>
 
       {!(currentPhase === "voting" || currentPhase === "night") && (
-        <div className="chatroom-input-container">
+        <div className={`chatroom-input-container ${isEliminated ? "disabled" : ""}`}>
           <textarea
             className="chatroom-input"
-            rows="2"
+            rows="4"
             placeholder="Type your message..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -267,7 +275,10 @@ const ChatroomPage = () => {
           lobbyId={lobbyId}
         />
       )}
-    </div>
+      {showEliminationMessage && (
+          <div className="elimination-message">Your presence fades into the unknown… AI takes your place.</div>
+      )}
+      </div>
   );
 };
 
