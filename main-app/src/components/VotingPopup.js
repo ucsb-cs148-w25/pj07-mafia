@@ -13,19 +13,35 @@ const VotingPopup = ({
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [voteSubmitted, setVoteSubmitted] = useState(false);
 
-  // Close the popup when the voting_complete event is received.
+  // Close the popup when the voting_complete event is received,
+  // but only for the voting type that matches this popup
   useEffect(() => {
-    const handleVoteComplete = () => {
-      console.log("[VOTING] Closing popup as voting is complete.");
-      if (typeof onClose === "function") {
-        onClose();
+    const handleVoteComplete = (result) => {
+      console.log("[VOTING] Received voting_complete event", result);
+      
+      // During night phase, night role popups close only when night phase ends
+      if (role === "Mafia" || role === "Doctor" || role === "Detective") {
+        // We'll let the phase change close these popups instead
+        if (result && result.type && result.type === "mafia") {
+          console.log("[VOTING] Closing night role popup as night phase ended");
+          if (typeof onClose === "function") {
+            onClose();
+          }
+        }
+      } else {
+        // For villager votes, close immediately on vote complete
+        console.log("[VOTING] Closing daytime voting popup");
+        if (typeof onClose === "function") {
+          onClose();
+        }
       }
     };
+    
     socket.on("voting_complete", handleVoteComplete);
     return () => {
       socket.off("voting_complete", handleVoteComplete);
     };
-  }, [onClose]);
+  }, [onClose, role]);
 
   // Debug: Log the players list received.
   useEffect(() => {
@@ -92,7 +108,7 @@ const VotingPopup = ({
       <button
         onClick={() => {
           if (selectedPlayer) {
-            console.log(`[VOTING] Vote submitted for ${selectedPlayer}`);
+            console.log(`[VOTING] ${role} vote submitted for ${selectedPlayer}`);
             setVoteSubmitted(true);
             // Delegate vote submission to the parent component.
             if (typeof onVote === "function") {

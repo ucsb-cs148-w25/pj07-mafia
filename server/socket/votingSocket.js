@@ -19,9 +19,21 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
 
   if (!result) return;
   
-  // If this is a pending result (night phase votes that need to be combined)
-  // Only emit the final result
-  if (result.pending) {
+  // CRITICAL: Night phase votes should NEVER be immediately processed
+  // They should only be processed at the end of the night phase
+  if (voteType === "doctor" || voteType === "detective" || voteType === "mafia") {
+    // Log but don't actually end the session or process results
+    console.log(`[VOTING] Night phase vote ${voteType} should not be ended here! Ignoring endVotingSession call.`);
+    console.log(`[VOTING] Night vote results will be processed at end of night phase only`);
+    
+    // Do NOT call endVoting here - night phase votes should be processed together at end of night
+    // Also, don't emit any events or messages
+    return;
+  }
+  
+  // For other vote types with pending results, also don't process yet
+  if (result && result.pending) {
+    console.log(`[VOTING] Vote result marked as pending, will process later`);
     return;
   }
 
@@ -185,22 +197,53 @@ function initVotingSocket(io) {
         return;
       }
 
-      console.log(`[VOTING] Processing vote from ${voter} for ${target} (voteId: ${voteId})`);
+      console.log(`[VOTING] Vote submitted: ${voter} voting for ${target} in session ${voteId} (${lobbyId})`);
       
-      VotingService.castVote(lobbyId, voteId, voter, target);
-      const session = VotingService.getSession(lobbyId, voteId);
-      
-      if (session) {
-        console.log(`[VOTING] Session ${voteId} has ${Object.keys(session.votes).length} votes (out of ${session.voters.size} needed)`);
+      // Get the session before casting the vote
+      const sessionBefore = VotingService.getSession(lobbyId, voteId);
+      if (!sessionBefore) {
+        console.warn(`[VOTING] No voting session found for voteId ${voteId} in lobby ${lobbyId}`);
+        return;
       }
-
-      // If all expected votes have been received, conclude the session
-      if (session && Object.keys(session.votes).length === session.voters.size) {
-        console.log(`[VOTING] All votes submitted for ${session.voteType}. Ending voting session.`);
-        // Slight delay to ensure all messages are processed
-        setTimeout(() => {
-          endVotingSession(io, lobbyId, voteId, session.voteType);
-        }, 100);
+      
+      // Record what type of vote this is
+      const voteType = sessionBefore.voteType;
+      console.log(`[VOTE SUBMISSION] ${voteType.toUpperCase()} vote from ${voter} targeting ${target}`);
+      
+      // Cast the vote
+      VotingService.castVote(lobbyId, voteId, voter, target);
+      
+      // Get the session after casting the vote
+      const session = VotingService.getSession(lobbyId, voteId);
+      if (!session) {
+        console.warn(`[VOTING] Session disappeared after casting vote! voteId: ${voteId}, lobbyId: ${lobbyId}`);
+        return;
+      }
+      
+      // Log the session state after casting the vote
+      console.log(`[VOTE TRACKING] After vote cast, session has ${Object.keys(session.votes).length} votes (out of ${session.voters.size} needed)`);
+      console.log(`[VOTE TRACKING] Vote details:`, JSON.stringify(session.votes, null, 2));
+      
+      // CRITICAL: For night phase roles, NEVER auto-end the voting session
+      // Only end voting sessions for day/villager votes immediately
+      if (voteType === "villager") {
+        if (Object.keys(session.votes).length === session.voters.size) {
+          // Only auto-end daytime/villager votes when all votes are in
+          console.log(`[VOTING] All villager votes submitted. Ending voting session.`);
+          // Slight delay to ensure all messages are processed
+          setTimeout(() => {
+            endVotingSession(io, lobbyId, voteId, voteType);
+          }, 100);
+        }
+      } else {
+        // For night phase roles (mafia, doctor, detective), confirm receipt but DON'T end session
+        console.log(`[NIGHT VOTE] ${voteType} vote from ${voter} recorded. Will process at end of night phase.`);
+        
+        // Send a private acknowledgment back to the voter
+        socket.emit("vote_acknowledged", {
+          voteType: voteType,
+          message: `Your ${voteType} vote for ${target} has been recorded.`
+        });
       }
     });
 
