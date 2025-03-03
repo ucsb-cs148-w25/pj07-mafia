@@ -22,6 +22,8 @@ const { initVotingSocket } = require('./socket/votingSocket');
 // (Optional) Express-based Controllers
 const lobbyController = require('./controllers/lobbyController');
 const chatController = require('./controllers/chatController');
+const votingService = require('./services/votingService');
+const lobbyService = require('./services/lobbyService');
 
 // Initialize Express App
 const app = express();
@@ -42,6 +44,10 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
   },
 });
+
+// Initialize services with socket.io instance
+lobbyService.initialize(io);
+votingService.initialize(io);
 
 // Attach Socket Listeners
 initLobbySocket(io);

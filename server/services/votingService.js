@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const votingSessions = {};        // { [lobbyId]: VotingSession[] }
 const eliminatedPlayers = {};     // { [lobbyId]: Set of usernames }
 const nightVotes = {};            // { [lobbyId]: { mafia: target, doctor: target, detective: target } }
+let io = null;  // Socket.io instance (will be set by initialize)
 
 /**
  * startVoting:
@@ -156,12 +157,14 @@ function endVoting(lobbyId, voteId) {
     if (eliminatedPlayer) {
       nightVotes[lobbyId].mafia = eliminatedPlayer;
       console.log(`[NIGHT] Mafia chose to eliminate ${eliminatedPlayer}`);
+      console.log(`[DEBUG VOTES] Current night votes for lobby ${lobbyId}: ${JSON.stringify(nightVotes[lobbyId])}`);
     }
   } else if (session.voteType === "doctor") {
     // Store the player the doctor chose to save
     if (eliminatedPlayer) {
       nightVotes[lobbyId].doctor = eliminatedPlayer;
       console.log(`[NIGHT] Doctor chose to save ${eliminatedPlayer}`);
+      console.log(`[DEBUG VOTES] Current night votes for lobby ${lobbyId}: ${JSON.stringify(nightVotes[lobbyId])}`);
     }
   } else if (session.voteType === "detective") {
     // Store the player the detective chose to investigate
@@ -190,7 +193,15 @@ function endVoting(lobbyId, voteId) {
           };
           
           console.log(`[NIGHT] Detective investigated ${eliminatedPlayer}. Result: ${isMafia ? 'Mafia' : 'Not Mafia'}`);
+          console.log(`[DEBUG VOTES] Current night votes for lobby ${lobbyId}: ${JSON.stringify(nightVotes[lobbyId])}`);
+          
+          // Debug detective socket ID
+          console.log(`[DEBUG DETECTIVE] Detective socket ID: ${detective.socketId}`);
+        } else {
+          console.log(`[DEBUG ERROR] Could not find detective player in lobby ${lobbyId}`);
         }
+      } else {
+        console.log(`[DEBUG ERROR] Could not find lobby ${lobbyId} for detective investigation`);
       }
     }
   } else if (session.voteType === "villager") {
@@ -233,8 +244,14 @@ function getSession(lobbyId, voteId) {
  * @param {object} io - Socket.io instance for sending messages
  * @returns {object} - Information about what happened during the night
  */
-function processNightVotes(lobbyId, io) {
+function initialize(socketIO) {
+  io = socketIO;
+  console.log('[VOTING SERVICE] Initialized with socket.io instance');
+}
+
+function processNightVotes(lobbyId) {
   console.log(`[NIGHT] Processing night votes for lobby ${lobbyId}`);
+  
   const results = { 
     playerEliminated: null,
     playerSaved: false,
@@ -274,6 +291,7 @@ function processNightVotes(lobbyId, io) {
   // Process mafia and doctor votes
   if (votes.mafia) {
     const targetPlayer = votes.mafia;
+    console.log(`[NIGHT DEBUG] Mafia voted to kill: ${targetPlayer}`);
     
     // Check if the doctor saved the mafia's target
     if (votes.doctor && votes.doctor === targetPlayer) {
@@ -282,13 +300,24 @@ function processNightVotes(lobbyId, io) {
       
       // Notify all players that someone was saved (without revealing who)
       if (io) {
-        io.to(lobbyId).emit("message", {
+        const message = {
           sender: "System",
           text: `A player was targeted in the night but was saved by swift medical intervention.`,
           timestamp: new Date()
-        });
+        };
+        console.log(`[NIGHT DEBUG] Broadcasting doctor save message: ${JSON.stringify(message)}`);
+        io.to(lobbyId).emit("message", message);
+      } else {
+        console.log(`[NIGHT ERROR] Cannot emit doctor save message - io is missing`);
       }
     } else {
+      // Log doctor's vote if there was one
+      if (votes.doctor) {
+        console.log(`[NIGHT DEBUG] Doctor voted to save ${votes.doctor}, but mafia targeted ${targetPlayer}`);
+      } else {
+        console.log(`[NIGHT DEBUG] No doctor vote recorded`);
+      }
+      
       // Target wasn't saved, eliminate them
       console.log(`[NIGHT] ${targetPlayer} was eliminated by the Mafia`);
       results.playerEliminated = targetPlayer;
@@ -302,11 +331,18 @@ function processNightVotes(lobbyId, io) {
         const p = lobby.players.find((pl) => pl.username === targetPlayer);
         if (p) {
           p.isAlive = false;
+          console.log(`[NIGHT DEBUG] Marked ${targetPlayer} as not alive in the lobby`);
+        } else {
+          console.log(`[NIGHT ERROR] Could not find player ${targetPlayer} in lobby ${lobbyId}`);
         }
+      } else {
+        console.log(`[NIGHT ERROR] Could not find lobby ${lobbyId}`);
       }
       
       // We don't notify players here, as this will be handled by the voting socket
     }
+  } else {
+    console.log(`[NIGHT DEBUG] No mafia vote recorded`);
   }
   
   // Clear night votes for this lobby
@@ -316,6 +352,7 @@ function processNightVotes(lobbyId, io) {
 }
 
 module.exports = {
+  initialize,
   startVoting,
   castVote,
   endVoting,

@@ -111,7 +111,7 @@ function startDayNightCycle(lobbyId) {
         case "voting": lobby.phase = "night"; break;
         case "night": 
           // Process night votes before transitioning to day
-          const nightResults = VotingService.processNightVotes(lobbyId, io);
+          const nightResults = VotingService.processNightVotes(lobbyId);
           
           // If a player was eliminated by the mafia (not saved by doctor)
           if (nightResults.playerEliminated) {
@@ -120,11 +120,12 @@ function startDayNightCycle(lobbyId) {
               eliminated: nightResults.playerEliminated 
             });
             
-            io.to(lobbyId).emit("message", {
+            const message = {
               sender: "System",
               text: `A quiet strike in the dark… a player has been replaced by AI.`,
               timestamp: new Date()
-            });
+            };
+            io.to(lobbyId).emit("message", message);
           } else if (nightResults.playerSaved) {
             // No notification needed - already sent in processNightVotes
           } else {

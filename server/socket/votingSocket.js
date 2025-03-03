@@ -45,7 +45,6 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   } else {
     msg = `The vote is tied. All players remain as they are… for now.`;
   }
-  
   io.to(lobbyId).emit("message", {
     sender: "System",
     text: msg,
