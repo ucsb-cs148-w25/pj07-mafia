@@ -32,12 +32,26 @@ const VotingPopup = ({
     console.log("[DEBUG POPUP] Received players list in VotingPopup:", players);
   }, [players]);
 
-  const filteredPlayers = players
+  const filteredPlayers = players;
+  
+  // Get the appropriate title for the voting popup based on role
+  const getVoteTitle = () => {
+    switch(role) {
+      case "Mafia":
+        return "KILL";
+      case "Doctor":
+        return "SAVE";
+      case "Detective":
+        return "INVESTIGATE";
+      default:
+        return "VOTE";
+    }
+  };
 
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "KILL" : "VOTE"}
+        {getVoteTitle()}
       </h3>
 
       <select

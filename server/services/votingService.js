@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const votingSessions = {};        // { [lobbyId]: VotingSession[] }
 const eliminatedPlayers = {};     // { [lobbyId]: Set of usernames }
+const nightVotes = {};            // { [lobbyId]: { mafia: target, doctor: target, detective: target } }
 
 /**
  * startVoting:
@@ -36,23 +37,25 @@ function startVoting(lobbyId, voteType) {
     role: p.role
   })));
 
-  if (voteType === "mafia") {
-    // Populate candidates: maybe every player except eliminated ones
+  // For special night roles, handle differently
+  if (voteType === "mafia" || voteType === "doctor" || voteType === "detective") {
+    // Populate candidates: all alive players except eliminated ones
     lobby.players.forEach(player => {
       if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
         newSession.players.add(player.username);
       }
     });
 
-    // Populate voters: only mafia members should vote
+    // Populate voters: only players with matching role should vote
     lobby.players.forEach(player => {
       if (player.isAlive &&
           !eliminatedPlayers[lobbyId].has(player.username) &&
-          player.role && player.role.toLowerCase() === "mafia") {
+          player.role && player.role.toLowerCase() === voteType.toLowerCase()) {
         newSession.voters.add(player.username);
       }
     });
   } else {
+    // Regular voting (during day phase)
     lobby.players.forEach(player => {
       if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
         newSession.players.add(player.username);
@@ -138,18 +141,70 @@ function calculateResults(lobbyId, voteId) {
 function endVoting(lobbyId, voteId) {
   const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
   if (sessionIndex === -1 || sessionIndex === undefined) return null;
-
+  
+  const session = votingSessions[lobbyId][sessionIndex];
   const eliminatedPlayer = calculateResults(lobbyId, voteId);
+  
+  // Initialize nightVotes object for this lobby if it doesn't exist
+  if (!nightVotes[lobbyId]) {
+    nightVotes[lobbyId] = {};
+  }
+  
+  // Handle voting based on vote type
+  if (session.voteType === "mafia") {
+    // Store mafia vote target for later processing at the end of night
+    if (eliminatedPlayer) {
+      nightVotes[lobbyId].mafia = eliminatedPlayer;
+      console.log(`[NIGHT] Mafia chose to eliminate ${eliminatedPlayer}`);
+    }
+  } else if (session.voteType === "doctor") {
+    // Store the player the doctor chose to save
+    if (eliminatedPlayer) {
+      nightVotes[lobbyId].doctor = eliminatedPlayer;
+      console.log(`[NIGHT] Doctor chose to save ${eliminatedPlayer}`);
+    }
+  } else if (session.voteType === "detective") {
+    // Store the player the detective chose to investigate
+    if (eliminatedPlayer) {
+      nightVotes[lobbyId].detective = eliminatedPlayer;
+      
+      // Send investigation result to the detective
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        // Find the detective player
+        const detective = lobby.players.find(p => 
+          p.isAlive && p.role && p.role.toLowerCase() === "detective");
+        
+        if (detective) {
+          // Check if the investigated player is mafia
+          const investigatedPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
+          const isMafia = investigatedPlayer && 
+                          investigatedPlayer.role && 
+                          investigatedPlayer.role.toLowerCase() === "mafia";
+          
+          // Store investigation result in nightVotes
+          nightVotes[lobbyId].detectiveResult = {
+            target: eliminatedPlayer,
+            isMafia,
+            detectiveSocketId: detective.socketId
+          };
+          
+          console.log(`[NIGHT] Detective investigated ${eliminatedPlayer}. Result: ${isMafia ? 'Mafia' : 'Not Mafia'}`);
+        }
+      }
+    }
+  } else if (session.voteType === "villager") {
+    // Regular day voting - eliminate player immediately
+    if (eliminatedPlayer) {
+      eliminatedPlayers[lobbyId].add(eliminatedPlayer);
 
-  if (eliminatedPlayer) {
-    eliminatedPlayers[lobbyId].add(eliminatedPlayer);
-
-    // Mark them as not alive in the lobby
-    const lobby = lobbyService.getLobby(lobbyId);
-    if (lobby) {
-      const p = lobby.players.find((pl) => pl.username === eliminatedPlayer);
-      if (p) {
-        p.isAlive = false;
+      // Mark them as not alive in the lobby
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        const p = lobby.players.find((pl) => pl.username === eliminatedPlayer);
+        if (p) {
+          p.isAlive = false;
+        }
       }
     }
   }
@@ -167,10 +222,104 @@ function getSession(lobbyId, voteId) {
   return votingSessions[lobbyId]?.find((s) => s.voteId === voteId) || null;
 }
 
+/**
+ * Process all night votes at the end of the night phase.
+ * This includes:
+ * 1. Send investigation results to detective
+ * 2. Check if mafia's target was saved by the doctor
+ * 3. Eliminate the target if they weren't saved
+ * 
+ * @param {string} lobbyId - ID of the lobby
+ * @param {object} io - Socket.io instance for sending messages
+ * @returns {object} - Information about what happened during the night
+ */
+function processNightVotes(lobbyId, io) {
+  console.log(`[NIGHT] Processing night votes for lobby ${lobbyId}`);
+  const results = { 
+    playerEliminated: null,
+    playerSaved: false,
+    investigation: null
+  };
+  
+  if (!nightVotes[lobbyId]) {
+    console.log(`[NIGHT] No night votes found for lobby ${lobbyId}`);
+    return results;
+  }
+  
+  const votes = nightVotes[lobbyId];
+  console.log(`[NIGHT] Votes for lobby ${lobbyId}:`, votes);
+  
+  // Process detective investigation result
+  if (votes.detectiveResult) {
+    const { target, isMafia, detectiveSocketId } = votes.detectiveResult;
+    
+    // Send private message to the detective with investigation result
+    if (io && detectiveSocketId) {
+      io.to(detectiveSocketId).emit("message", {
+        sender: "System",
+        text: `Your investigation reveals that ${target} is ${isMafia ? 'a member of the Mafia!' : 'not a member of the Mafia.'}`,
+        timestamp: new Date(),
+        isPrivate: true
+      });
+      
+      results.investigation = {
+        target,
+        result: isMafia ? "Mafia" : "Not Mafia" 
+      };
+      
+      console.log(`[NIGHT] Sent investigation result to detective about ${target}`);
+    }
+  }
+  
+  // Process mafia and doctor votes
+  if (votes.mafia) {
+    const targetPlayer = votes.mafia;
+    
+    // Check if the doctor saved the mafia's target
+    if (votes.doctor && votes.doctor === targetPlayer) {
+      console.log(`[NIGHT] Doctor saved ${targetPlayer} from elimination`);
+      results.playerSaved = true;
+      
+      // Notify all players that someone was saved (without revealing who)
+      if (io) {
+        io.to(lobbyId).emit("message", {
+          sender: "System",
+          text: `A player was targeted in the night but was saved by swift medical intervention.`,
+          timestamp: new Date()
+        });
+      }
+    } else {
+      // Target wasn't saved, eliminate them
+      console.log(`[NIGHT] ${targetPlayer} was eliminated by the Mafia`);
+      results.playerEliminated = targetPlayer;
+      
+      // Mark player as eliminated
+      eliminatedPlayers[lobbyId].add(targetPlayer);
+      
+      // Mark them as not alive in the lobby
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        const p = lobby.players.find((pl) => pl.username === targetPlayer);
+        if (p) {
+          p.isAlive = false;
+        }
+      }
+      
+      // We don't notify players here, as this will be handled by the voting socket
+    }
+  }
+  
+  // Clear night votes for this lobby
+  nightVotes[lobbyId] = {};
+  
+  return results;
+}
+
 module.exports = {
   startVoting,
   castVote,
   endVoting,
   getVotingSessions,
   getSession,
+  processNightVotes,
 };

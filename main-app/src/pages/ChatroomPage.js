@@ -118,10 +118,29 @@ const ChatroomPage = () => {
     // Check if the current phase qualifies for auto vote initiation
     if ((currentPhase === "night" || currentPhase === "voting")) {
         console.log("[DEBUG] inside the phase validator", {votingInitiated})
-        const voteTypeToEmit =
-            currentPhase === "voting" ? "villager" : "mafia";
-        console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
-        socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+        
+        let voteTypeToEmit;
+        if (currentPhase === "voting") {
+          voteTypeToEmit = "villager";
+        } else if (currentPhase === "night") {
+          // Night-time voting depends on role
+          if (role?.toLowerCase() === "mafia") {
+            voteTypeToEmit = "mafia";
+          } else if (role?.toLowerCase() === "doctor") {
+            voteTypeToEmit = "doctor";
+          } else if (role?.toLowerCase() === "detective") {
+            voteTypeToEmit = "detective";
+          } else {
+            // Other roles don't vote at night
+            return;
+          }
+        }
+        
+        // Only emit if we have a valid vote type
+        if (voteTypeToEmit) {
+          console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
+          socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+        }
     }
   }, [currentPhase, role, lobbyId, isEliminated, votingInitiated]);
 
@@ -144,6 +163,22 @@ const ChatroomPage = () => {
         if (role && role.toLowerCase() === "mafia") {
           setIsVoting(true);
         } else {
+          setIsVoteLocked(true);
+        }
+      } else if (incType === "doctor") {
+        // only doctor sees the popup
+        if (role && role.toLowerCase() === "doctor") {
+          setIsVoting(true);
+        } else if (currentPhase === "night") {
+          // Lock chat for all non-doctor players during night phase
+          setIsVoteLocked(true);
+        }
+      } else if (incType === "detective") {
+        // only detective sees the popup
+        if (role && role.toLowerCase() === "detective") {
+          setIsVoting(true);
+        } else if (currentPhase === "night") {
+          // Lock chat for all non-detective players during night phase
           setIsVoteLocked(true);
         }
       } else {
@@ -270,7 +305,7 @@ const ChatroomPage = () => {
             });
             setIsVoting(false);
           }}
-          role={voteType === "mafia" ? "Mafia" : "Villager"}
+          role={role || "Villager"}
           username={username}
           lobbyId={lobbyId}
         />

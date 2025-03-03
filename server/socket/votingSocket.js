@@ -17,22 +17,35 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   // End the voting session (VotingService.endVoting should remove the session)
   const eliminated = VotingService.endVoting(lobbyId, voteId);
 
+  // For night roles other than mafia, we don't announce the vote results until night phase ends
+  if (voteType === "doctor" || voteType === "detective") {
+    // Just notify clients that voting is complete to close the popup
+    io.to(lobbyId).emit("voting_complete", { eliminated: null });
+    
+    // For detective, individual results will be sent privately at night end
+    // For doctor, results will be processed at night end
+    return;
+  }
+  
+  // For mafia nighttime vote, we also defer elimination until night end
+  if (voteType === "mafia") {
+    // Just notify clients that voting is complete to close the popup
+    io.to(lobbyId).emit("voting_complete", { eliminated: null });
+    return;
+  }
+
+  // For regular villager voting during the day, process elimination immediately
   // Notify all clients that voting is complete
   io.to(lobbyId).emit("voting_complete", { eliminated });
 
   // Create a message regardless of whether a player was eliminated
   let msg;
   if (eliminated) {
-    msg =
-      voteType === "mafia"
-        ? `A quiet strike in the dark… a player has been replaced by AI.`
-        : `The majority has spoken… a player has been replaced by AI.`;
+    msg = `The majority has spoken… a player has been replaced by AI.`;
   } else {
-    msg =
-      voteType === "mafia"
-        ? `An eerie silence lingers… all players remain as they are… for now.`
-        : `The vote is tied. All players remain as they are… for now.`;
+    msg = `The vote is tied. All players remain as they are… for now.`;
   }
+  
   io.to(lobbyId).emit("message", {
     sender: "System",
     text: msg,

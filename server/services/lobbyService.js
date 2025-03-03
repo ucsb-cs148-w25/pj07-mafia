@@ -8,6 +8,7 @@ Contains business logic related to lobbies.
 const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
+const VotingService = require('./votingService');
 const { 
   DAY_DURATION, 
   VOTING_DURATION, 
@@ -108,7 +109,35 @@ function startDayNightCycle(lobbyId) {
       switch (lobby.phase) {
         case "day": lobby.phase = "voting"; break;
         case "voting": lobby.phase = "night"; break;
-        case "night": lobby.phase = "day"; break;
+        case "night": 
+          // Process night votes before transitioning to day
+          const nightResults = VotingService.processNightVotes(lobbyId, io);
+          
+          // If a player was eliminated by the mafia (not saved by doctor)
+          if (nightResults.playerEliminated) {
+            // The message about elimination is sent by endVoting via voting socket
+            io.to(lobbyId).emit("voting_complete", { 
+              eliminated: nightResults.playerEliminated 
+            });
+            
+            io.to(lobbyId).emit("message", {
+              sender: "System",
+              text: `A quiet strike in the dark… a player has been replaced by AI.`,
+              timestamp: new Date()
+            });
+          } else if (nightResults.playerSaved) {
+            // No notification needed - already sent in processNightVotes
+          } else {
+            // No one was targeted by mafia
+            io.to(lobbyId).emit("message", {
+              sender: "System",
+              text: `An eerie silence lingers… all players remain as they are… for now.`,
+              timestamp: new Date()
+            });
+          }
+          
+          lobby.phase = "day"; 
+          break;
       }
       startDayNightCycle(lobbyId);
     }
