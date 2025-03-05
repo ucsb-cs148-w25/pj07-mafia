@@ -10,27 +10,37 @@ Initialize socket.io for real-time communication.
 Attach controllers and sockets to handle application logic.
 */
 
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors'; // Import CORS middleware
 
 // Socket initializers
-const { initLobbySocket } = require('./socket/lobbySocket');
-const { initChatSocket } = require('./socket/chatSocket');
-const { initVotingSocket } = require('./socket/votingSocket');
+import { initLobbySocket } from './socket/lobbySocket.js';
+import { initChatSocket } from './socket/chatSocket.js';
+import { initVotingSocket } from './socket/votingSocket.js';
 
 // (Optional) Express-based Controllers
-const lobbyController = require('./controllers/lobbyController');
-const chatController = require('./controllers/chatController');
+import lobbyController from './controllers/lobbyController.js';
+import chatController from './controllers/chatController.js';
+
+// Import the new route for rewriting messages
+import claudeServiceRoute from './routes/claudeServiceRoute.js'; // Import the route
 
 // Initialize Express App
 const app = express();
+app.use(cors({
+  origin: '*', // Allow all origins (modify for production security)
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'], // Customize headers allowed in requests
+}));
 app.use(express.json());
 
 // Mount your REST controllers here if you plan to keep them
 // (These are optional if you're going pure websockets)
 app.use('/api/lobby', lobbyController);
 app.use('/api/chat', chatController);
+app.use('/api/claude', claudeServiceRoute); // Add this line for the Claude service
 
 // Create HTTP Server
 const server = http.createServer(app);
