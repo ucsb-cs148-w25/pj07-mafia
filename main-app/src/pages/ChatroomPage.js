@@ -31,6 +31,7 @@ const ChatroomPage = () => {
   const [voteId, setVoteId] = useState(null);
   const [players, setPlayers] = useState([]);
   const [isVoteLocked, setIsVoteLocked] = useState(false);
+  const [showEliminationMessage, setShowEliminationMessage] = useState(false);
 
   const debugLog = (msg, data = null) => console.log(`[DEBUG] ${msg}`, data);
 
@@ -118,10 +119,9 @@ const ChatroomPage = () => {
     }
     // Check if the current phase qualifies for auto vote initiation
     if ((currentPhase === "night" || currentPhase === "voting")) {
-        setVotingInitiated(true)
         console.log("[DEBUG] inside the phase validator", {votingInitiated})
         const voteTypeToEmit =
-            currentPhase === "night" ? "mafia" : "villager";
+            currentPhase === "voting" ? "villager" : "mafia";
         console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
         socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
     }
@@ -155,11 +155,18 @@ const ChatroomPage = () => {
     };
 
     const handleVotingComplete = ({ eliminated }) => {
-      debugLog("voting_complete", { eliminated });
+      debugLog("voting_complete", { eliminated, username});
       setIsVoting(false);
       setIsVoteLocked(false);
-      if (eliminated === username) {
-        setIsEliminated(true);
+      if (eliminated){
+        if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
+          setIsEliminated(true);
+          console.log("[DEBUG] Set IsEliminated to True")
+          setShowEliminationMessage(true);
+          setTimeout(() => {
+            setShowEliminationMessage(false);
+          }, 6000);
+        }
       }
     };
 
@@ -249,10 +256,10 @@ const ChatroomPage = () => {
   };
 
   return (
-    <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""}`}>
+    <div className={`chatroom-container ${currentPhase === "night" ? "night-mode" : ""} ${isEliminated ? "eliminated" : ""}`}>
       <div className="chatroom-header">
         <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
-        <button className="back-button" onClick={() => navigate("/")}>Back to Home</button>
+        {/* <button className="back-button" onClick={() => navigate("/")}>Back to Home</button> */}
 
         <div className="phase-timer">{formatTime(timeLeft)}</div>
       </div>
@@ -274,10 +281,10 @@ const ChatroomPage = () => {
       </div>
 
       {!(currentPhase === "voting" || currentPhase === "night") && (
-        <div className="chatroom-input-container">
+        <div className={`chatroom-input-container ${isEliminated ? "disabled" : ""}`}>
           <textarea
             className="chatroom-input"
-            rows="2"
+            rows="4"
             placeholder="Type your message..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -312,13 +319,26 @@ const ChatroomPage = () => {
             // Immediately close popup => no duplicates
             setIsVoting(false);
           }}
-          onClose={() => setIsVoting(false)}
+          onClose={() => {
+            // Treat cancellation as a vote with a default target value (e.g., "abstain")
+            debugLog(`Vote cancelled by ${username}`);
+            socket.emit("submit_vote", {
+              lobbyId,
+              voteId,
+              voter: username,
+              target: "s3cr3t_1nv1s1bl3_pl@y3r",
+            });
+            setIsVoting(false);
+          }}
           role={voteType === "mafia" ? "Mafia" : "Villager"}
           username={username}
           lobbyId={lobbyId}
         />
       )}
-    </div>
+      {showEliminationMessage && (
+          <div className="elimination-message">Your presence fades into the unknown… AI takes your place.</div>
+      )}
+      </div>
   );
 };
 

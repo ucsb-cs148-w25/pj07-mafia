@@ -15,22 +15,22 @@
   - Adding game-like visuals (e.g., icons, logos, sprites) and background animations.
   - Creating different color gradients for system messages versus user messages.
 
-### Feature Enhancements
+### Feature and Component Changes
 - **Instructions and Onboarding**
   - Create an onboarding page or instructions section explaining the rules and game flow.
   - Add tooltips or a quick tutorial for new users.
   
-- **Player Personalization**
+- **Player Personalization (if time permits) **
   - Allow users to select or upload profile icons.
   - Consider implementing a simple profile page to display high scores and game history.
   
-- **Communication Options**
+- **Communication Options (if time permits but this defeats the purpose of the game) **
   - Explore the integration of voice or video chat to complement the text-based system.
 
 ### Gameplay & AI Integration
 - **AI Chatbot Functionality**
-  - Enhance the AI chatbot feature that replaces eliminated players.
-  - Refine AI behavior to ensure smooth game transitions and maintain engagement.
+  - Create the AI chatbot feature that replaces eliminated players.
+  - Refine and test AI behavior to ensure smooth game transitions and maintain engagement.
   
 - **Game Dynamics**
   - Provide visual cues when a player is eliminated, including a notification and a dedicated “dead chat” channel.
@@ -55,16 +55,6 @@
   - **Tasks:**
     - Develop an onboarding/instructions page or modal.
     - Incorporate tooltips or a quick-start guide.
-    
-- **User Story:** *As a player, I want to personalize my experience with a profile icon and history page so that I feel more connected to the game.*
-  - **Tasks:**
-    - Add functionality for selecting/uploading profile icons.
-    - Create a simple profile page to display game stats, high scores, and history.
-    
-- **User Story:** *As a player, I’d like additional communication options (e.g., voice chat) to enhance the gaming experience.*
-  - **Tasks:**
-    - Research and prototype potential voice chat integrations.
-    - Evaluate technical feasibility and user experience impacts.
 
 ### Action Item 3: Gameplay & AI Integration
 - **User Story:** *As a player, I want clear visual cues when I am eliminated so that I understand my status and can engage in a “dead chat” mode.*
@@ -79,22 +69,20 @@
 
 ## Next Steps
 
-1. **Immediate Priorities (Next 1-2 Weeks):**
+1. **Immediate Priorities (Week 7):**
    - Revamp the chatroom interface to enhance clarity and visual appeal.
    - Implement the “copy ID” feature for lobby codes and add a player counter.
    - Develop an initial instructions page or onboarding tutorial.
 
-2. **Mid-Term Enhancements (Next 3-4 Weeks):**
+2. **Mid-Term Enhancements (Week 8 onwards):**
    - Start development on player personalization features (profile icons and profile page).
-   - Prototype and test voice chat functionality.
    - Refine the AI chatbot functionality and implement the “dead chat” channel.
 
 3. **Ongoing Testing & Iteration:**
-   - Collect continuous user feedback as new features are released.
    - Conduct usability tests to validate UI/UX improvements.
    - Adjust game settings (e.g., vote durations, discussion times) based on player input.
 
 4. **Team Coordination:**
-   - Schedule regular stand-ups to monitor progress on each action item.
-   - Delegate tasks based on team expertise and current workload.
-   - Update project documentation and roadmap as features are developed and refined.
+   - Schedule more regular stand-ups to monitor progress on each action item.
+   - Delegate tasks based on team avaiablity and current workload.
+   - Update project Kanban board and issues as features are developed and refined.

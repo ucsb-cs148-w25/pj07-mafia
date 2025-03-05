@@ -18,6 +18,6 @@ Shivani will use AI to generate a more polished UI for the frontend portion of t
 
 Tyler will work on some unit tests for the voting functions.
 
-Priyanka will continue work on the frontend.
+Priyanka will work on the ui/ux for voting.
 
-Roadblocks include other classwork.
+Roadblocks were either none or other classwork.

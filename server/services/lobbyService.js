@@ -8,14 +8,13 @@ Contains business logic related to lobbies.
 const { v4: uuidv4 } = require('uuid');
 const Lobby = require('../models/lobbyModel');
 const Player = require('../models/playerModel');
-
-// Example durations
-const DAY_DURATION = 20;
-const VOTING_DURATION = 30;
-const NIGHT_DURATION = 40;
-
-const MIN_PLAYERS = 6; // Example minimum
-const MAX_PLAYERS = 20;
+const { 
+  DAY_DURATION, 
+  VOTING_DURATION, 
+  NIGHT_DURATION, 
+  MIN_PLAYERS, 
+  MAX_PLAYERS 
+} = require('../constants'); 
 
 const lobbies = {};
 let io = null;
