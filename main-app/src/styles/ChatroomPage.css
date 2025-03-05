@@ -269,16 +269,6 @@
   background-color: #64170e;
 }
 
-/* Role banner */
-.role-banner {
-  width: 100%;
-  background-color: #b65303;
-  color: #f9ecd2;
-  font-family: serif;
-  letter-spacing: 2px;
-  font-size: 1.25rem;
-}
-
 .voting-controls {
   display: flex; /* or inline-flex */
   align-items: center; /* Vertically align items */
@@ -361,20 +351,12 @@
   color: #f9ecd2;
 }
 
-.night-mode .role-banner {
-  background-color: #732800;
-}
-
 .night-mode .voting-controls button.villager-player {
   background-color: #732800;
 }
 
 .night-mode .voting-controls button.villager-player:hover {
   background-color: #7328009e;
-}
-
-.night-mode .role-banner.mafia {
-  background-color: #810b03;
 }
 
 .night-mode .voting-controls button.mafia-player {
@@ -391,7 +373,6 @@
 
 .night-mode .sidebar {
   background-color: #110101;
-  /* Remove shadow and instead add light borders */
   box-shadow: none;
 }
 
