@@ -6,13 +6,13 @@ const router = express.Router();
 // Define the POST endpoint to rewrite messages
 router.post('/rewrite', async (req, res) => {
   try {
-    const { message } = req.body; // Get the message from the request body
+    const { message, instructions } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const rewrittenMessage = await rewriteMessage(message); // Call the rewriteMessage function
+    const rewrittenMessage = await rewriteMessage(message, instructions); // Call the rewriteMessage function
     res.json({ rewrittenMessage }); // Send back the rewritten message
   } catch (error) {
     console.error('Error:', error);
