@@ -191,28 +191,6 @@
   letter-spacing: 3px;
 }
 
-/* Back to Home button */
-.back-button {
-  position: absolute;
-  left: 15px;
-  top: 15px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  background-color: #911b0e;
-  color: #f9ecd2;
-  border: none;
-  cursor: pointer;
-  font-family: 'gothic';
-  letter-spacing: 2px;
-  font-weight: 600;
-  font-size: 1.15rem;
-}
-
-.back-button:hover {
-  background-color: #64170e;
-  color: #f9ecd2;
-}
-
 /* .timer-display {
   position: absolute;
   top: 47px;
