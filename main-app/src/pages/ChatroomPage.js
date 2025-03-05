@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import socket from "../service/socket";
+import axios from "axios";
+// import { rewriteMessage } from '../../server/services/claudeService';
 import VotingPopup from "../components/VotingPopup"; 
 import "../styles/ChatroomPage.css";
 
@@ -175,11 +177,69 @@ const ChatroomPage = () => {
     isVoteLocked;
 
   // 10. handleSendMessage
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim() || chatDisabled) return;
-    socket.emit("sendMessage", { lobbyId, text: message.trim() });
-    setMessage("");
+  
+    try {
+      const response = await fetch('http://localhost:5001/api/claude/rewrite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message.trim() }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log("API Response:", data); // Log the entire response to see its structure
+        const rewrittenMessage = data.rewrittenMessage;
+  
+        if (rewrittenMessage) {
+          socket.emit("sendMessage", { lobbyId, text: rewrittenMessage });
+          setMessage(""); // Clear the message input
+        } else {
+          console.error("No rewrittenMessage found in the response");
+        }
+      } else {
+        const errorData = await response.json();
+        console.error("Error:", errorData.error);
+      }
+    } catch (error) {
+      console.error("Error calling Claude API:", error);
+    }
   };
+  
+
+  // const handleSendMessage = () => {
+  //   if (!message.trim() || chatDisabled) return;
+  //   socket.emit("sendMessage", { lobbyId, text: message.trim() });
+  //   setMessage("");
+  // };
+  
+
+  // 10. handleSendMessage
+  // const handleSendMessage = () => {
+  //   if (!message.trim() || chatDisabled) return;
+  //   socket.emit("sendMessage", { lobbyId, text: message.trim() });
+  //   setMessage("");
+  // };
+
+  // const handleSendMessage = async (message) => {
+  //   try {
+  //     console.log("Sending message:", message); // Log to see the message being sent
+  //     const response = await axios.post('http://localhost:5001/api/claude/rewrite', {
+  //       message: message,
+  //     });
+  //     console.log("Response from Claude service:", response.data); // Log the response
+      
+  //     // Handle the response to display the rewritten message
+  //     setMessage(response.data.rewrittenMessage); // Assuming you're setting the response back to state
+  //   } catch (error) {
+  //     console.error("Error while sending message:", error); // Log any errors
+  //   }
+  // };
+  
+  
 
   // 11. format time
   const formatTime = (sec) => {
