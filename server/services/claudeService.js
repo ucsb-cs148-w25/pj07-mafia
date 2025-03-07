@@ -38,3 +38,33 @@ export const rewriteMessage = async (message, instructions = "Rewrite the messag
         throw error;
     }
 };
+
+export const genResponse = async (conversationText, eliminatedPlayerName) => {
+    // instructions to tune
+    const instructions = `You are ${eliminatedPlayerName}. Given the following conversation log, generate a message that fits the context of the conversation. Keep your tone consistent with your previous messages as ${eliminatedPlayerName}.`;
+    console.log(`[AI] Triggered genResonpose for ${eliminatedPlayerName}, given conversation:\n${conversationText}`)
+    try {
+      const prompt = `Instructions: ${instructions}\nConversation: "${conversationText}".\nGenerate a response as ${eliminatedPlayerName} without using quotes.`;
+      
+      const response = await axios.post(
+        ANTHROPIC_API_URL,
+        {
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 700,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        {
+          headers: {
+            'X-API-Key': apiKey,
+            'Content-Type': 'application/json',
+            'Anthropic-Version': '2023-06-01',
+          },
+        }
+      );
+  
+      return response.data.content[0].text;
+    } catch (error) {
+      console.error("Error in genResponse:", error.response?.data || error.message);
+      throw error;
+    }
+  };

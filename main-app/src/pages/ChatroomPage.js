@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import socket from "../service/socket";
-import axios from "axios";
-// import { rewriteMessage } from '../../server/services/claudeService';
 import VotingPopup from "../components/VotingPopup"; 
 import "../styles/ChatroomPage.css";
+import config from "../config";
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
@@ -32,6 +31,11 @@ const ChatroomPage = () => {
   const [players, setPlayers] = useState([]);
   const [isVoteLocked, setIsVoteLocked] = useState(false);
   const [showEliminationMessage, setShowEliminationMessage] = useState(false);
+
+  const [conversationLog, setConversationLog] = useState([]);
+  const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
+  // Preset probability threshold (P)
+  const thres = config.THRESHOLD;
 
   const debugLog = (msg, data = null) => console.log(`[DEBUG] ${msg}`, data);
 
@@ -64,11 +68,15 @@ const ChatroomPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 4. Listen for message
+  // 4. Listen for message: update both displayed messages and conversation log
   useEffect(() => {
     const handleMessage = (m) => {
       debugLog("message", m);
-      setMessages(prev => [...prev, m]);
+      setMessages((prev) => [...prev, m]);
+      // Assume the API–filtered message is in m.text.
+      if (m.sender !== "System"){
+        setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
+      }
     };
     socket.on("message", handleMessage);
     return () => {
@@ -160,12 +168,27 @@ const ChatroomPage = () => {
       setIsVoteLocked(false);
       if (eliminated){
         if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
+          // Use a functional update so that the latest state is used.
+          setIsEliminated(prevIsEliminated => {
+            if (!prevIsEliminated) {
+              console.log("[ELIMINATION] message displayed");
+              setShowEliminationMessage(true);
+              setTimeout(() => {
+                setShowEliminationMessage(false);
+              }, 6000);
+            }
+            return true;
+          });
           setIsEliminated(true);
-          console.log("[DEBUG] Set IsEliminated to True")
-          setShowEliminationMessage(true);
-          setTimeout(() => {
-            setShowEliminationMessage(false);
-          }, 6000);
+          console.log("[DEBUG] Set IsEliminated to True");
+        } else {
+          setEliminatedPlayers((prev) => {
+            if (!prev.includes(eliminated)) {
+              console.log("[DEBUG] Adding eliminated player:", eliminated);
+              return [...prev, eliminated];
+            }
+            return prev;
+          });
         }
       }
     };
@@ -183,27 +206,68 @@ const ChatroomPage = () => {
     (voteType === "mafia" && isVoting && role?.toLowerCase() !== "mafia") ||
     isVoteLocked;
 
-  // 10. handleSendMessage
+  // 10. Handle sending a message: filter via Claude then update conversation log.
+  // Also trigger eliminated players’ AI responses if random chance succeeds.
   const handleSendMessage = async () => {
     if (!message.trim() || chatDisabled) return;
-  
     try {
-      const response = await fetch('http://localhost:5001/api/claude/rewrite', {
+      // First, call the rewrite endpoint to get the filtered message.
+      const response = await fetch(`${config.backendUrl}/api/claude/rewrite`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: message.trim() }),
       });
   
       if (response.ok) {
         const data = await response.json();
-        console.log("API Response:", data); // Log the entire response to see its structure
         const rewrittenMessage = data.rewrittenMessage;
   
         if (rewrittenMessage) {
-          socket.emit("sendMessage", { lobbyId, text: rewrittenMessage });
-          setMessage(""); // Clear the message input
+          // Emit the filtered message to the chatroom.
+          socket.emit("sendMessage", { lobbyId, text: rewrittenMessage, senderName: username });
+          // Create the new log entry.
+          const newEntry = { sender: username, content: rewrittenMessage };
+          // Update the conversation log.
+          const updatedLog = [...conversationLog, newEntry];
+          // Only trigger AI responses if this new entry was sent by the current user.
+          if (newEntry.sender === username) {
+            eliminatedPlayers.forEach((elim) => {
+              const R = Math.random();
+              console.log(`[AI] R = ${R}`);
+              if (R > thres) {
+                console.log(`[AI] R is bigger than the threshold, expect AI message from player ${elim}`);
+                const conversationText = updatedLog
+                  .map((msg) => `sender: ${msg.sender}, content: ${msg.content}`)
+                  .join("\n");
+  
+                // Call the genResponse endpoint.
+                fetch(`${config.backendUrl}/api/claude/genResponse`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    conversationText,
+                    eliminatedPlayerName: elim,
+                  }),
+                })
+                  .then((res) => res.json())
+                  .then((result) => {
+                    if (result.responseText) {
+                      // Emit the generated message as if sent by the eliminated player.
+                      socket.emit("sendMessage", { lobbyId, text: result.responseText, senderName: elim });
+                      // Update the conversation log with this new message.
+                      setConversationLog((prevLog) => [
+                        ...prevLog,
+                        { sender: elim, content: result.responseText },
+                      ]);
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Error generating response for eliminated player", elim, err);
+                  });
+              }
+            });
+          }
+          setMessage(""); // Clear the input field.
         } else {
           console.error("No rewrittenMessage found in the response");
         }
@@ -215,37 +279,6 @@ const ChatroomPage = () => {
       console.error("Error calling Claude API:", error);
     }
   };
-  
-
-  // const handleSendMessage = () => {
-  //   if (!message.trim() || chatDisabled) return;
-  //   socket.emit("sendMessage", { lobbyId, text: message.trim() });
-  //   setMessage("");
-  // };
-  
-
-  // 10. handleSendMessage
-  // const handleSendMessage = () => {
-  //   if (!message.trim() || chatDisabled) return;
-  //   socket.emit("sendMessage", { lobbyId, text: message.trim() });
-  //   setMessage("");
-  // };
-
-  // const handleSendMessage = async (message) => {
-  //   try {
-  //     console.log("Sending message:", message); // Log to see the message being sent
-  //     const response = await axios.post('http://localhost:5001/api/claude/rewrite', {
-  //       message: message,
-  //     });
-  //     console.log("Response from Claude service:", response.data); // Log the response
-      
-  //     // Handle the response to display the rewritten message
-  //     setMessage(response.data.rewrittenMessage); // Assuming you're setting the response back to state
-  //   } catch (error) {
-  //     console.error("Error while sending message:", error); // Log any errors
-  //   }
-  // };
-  
   
 
   // 11. format time

@@ -1,5 +1,5 @@
 import express from 'express';
-import { rewriteMessage } from '../services/claudeService.js'; // Import the rewriteMessage function
+import { rewriteMessage, genResponse } from '../services/claudeService.js'; // Import the rewriteMessage function
 
 const router = express.Router();
 
@@ -16,6 +16,22 @@ router.post('/rewrite', async (req, res) => {
     res.json({ rewrittenMessage }); // Send back the rewritten message
   } catch (error) {
     console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/genResponse', async (req, res) => {
+  try {
+    const { conversationText, eliminatedPlayerName } = req.body;
+    
+    if (!conversationText || !eliminatedPlayerName) {
+      return res.status(400).json({ error: 'conversationText and eliminatedPlayerName are required' });
+    }
+    
+    const responseText = await genResponse(conversationText, eliminatedPlayerName);
+    res.json({ responseText });
+  } catch (error) {
+    console.error('Error in /genResponse:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
