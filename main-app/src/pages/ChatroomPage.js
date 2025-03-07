@@ -225,7 +225,7 @@ const ChatroomPage = () => {
       <div className="chatroom-body">
 
         {/* Sidebar */}
-        <div className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
+        <div className={`sidebar ${isSidebarOpen ? "open" : "closed"}`} style={{ overflowY: "auto" }}>
 
           {/* Dropdown entries container */}
           <div className="role-info-container">
@@ -246,10 +246,54 @@ const ChatroomPage = () => {
                 </div>
                 {isRoleDropdownOpen && (
                   <div className="role-rules">
-                    {role === "Mafia" && "Mafia Rules: "}
-                    {role === "Villager" && "Villager Rules: "}
-                    {role === "Doctor" && "Doctor Rules: "}
-                    {role === "Detective" && "Detective Rules: "}
+                    {role === "Mafia" && (
+                      <div>
+                        <h3>Mafia Rules</h3>
+                        <p>
+                          <strong>Team:</strong> You are on the Mafia team.
+                          <br />
+                          <strong>Objective:</strong> Eliminate all Villagers without being exposed.
+                          <br />
+                          <strong>Actions:</strong> During the night, collaborate secretly with fellow Mafia members to choose a victim. During the day, blend in with others and misdirect suspicion.
+                        </p>
+                      </div>
+                    )}
+                    {role === "Villager" && (
+                      <div>
+                        <h3>Villager Rules</h3>
+                        <p>
+                          <strong>Team:</strong> You are on the Villagers team.
+                          <br />
+                          <strong>Objective:</strong> Identify and eliminate the Mafia.
+                          <br />
+                          <strong>Actions:</strong> Participate in daily discussions, share suspicions, and vote to eliminate players who you suspect are Mafia.
+                        </p>
+                      </div>
+                    )}
+                    {role === "Doctor" && (
+                      <div>
+                        <h3>Doctor Rules</h3>
+                        <p>
+                          <strong>Team:</strong> You are on the Villagers team.
+                          <br />
+                          <strong>Objective:</strong> Protect Villagers from being eliminated by the Mafia.
+                          <br />
+                          <strong>Actions:</strong> Each night, choose one player to safeguard. Your protection may prevent a Mafia attack if you guess correctly.
+                        </p>
+                      </div>
+                    )}
+                    {role === "Detective" && (
+                      <div>
+                        <h3>Detective Rules</h3>
+                        <p>
+                          <strong>Team:</strong> You are on the Villagers team.
+                          <br />
+                          <strong>Objective:</strong> Uncover the identity of the Mafia.
+                          <br />
+                          <strong>Actions:</strong> Every night, investigate a player to gather clues about their role. Use your findings during discussions to help identify Mafia members.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -267,7 +311,26 @@ const ChatroomPage = () => {
               {isFullRuleDropdownOpen && (
                 <div className="dropdown-content">
                   <div className="full-rule-text">
-                    Full rule
+                    <h2>Full Rules of Mafia</h2>
+                    <p><strong>Game Setup:</strong> This is a normal game of Mafia with the following roles:</p>
+                    <ul>
+                      <li><strong>Villager:</strong> Works with others to identify and eliminate the Mafia.</li>
+                      <li><strong>Mafia:</strong> Secretly works to eliminate the Villagers while staying hidden.</li>
+                      <li><strong>Doctor:</strong> Can protect a player from being eliminated during the night phase.</li>
+                      <li><strong>Inspector:</strong> Investigates players to determine if they might be Mafia.</li>
+                      <li><strong>Detective:</strong> Uses clues and deductions to help identify the Mafia, working closely with the Villagers.</li>
+                    </ul>
+                    <p><strong>Game Phases:</strong></p>
+                    <ol>
+                      <li><em>Night:</em> The Mafia chooses a victim, while the Doctor selects someone to protect. The Inspector and Detective gather information.</li>
+                      <li><em>Day:</em> All players discuss, debate, and vote on who they suspect is Mafia. The player with the majority vote is eliminated.</li>
+                    </ol>
+                    <p><strong>Twists:</strong></p>
+                    <ul>
+                      <li><em>AI Rephrasing:</em> Any text you send during the game will be parsed and rephrased by an AI. This helps maintain consistency in language and style throughout the game.</li>
+                      <li><em>AI Replacement:</em> When you die, you will be replaced by an AI that takes over your character, ensuring the game continues smoothly without interruption.</li>
+                    </ul>
+                    <p>Use strategy, observation, and collaboration to outsmart the opposing side and secure victory!</p>
                   </div>
                 </div>
               )}
