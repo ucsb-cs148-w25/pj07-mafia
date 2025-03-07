@@ -19,8 +19,8 @@
 
 ## Non-Code Contributions
 - **Documentation:**  
-  - Authored complete documentation for `eval_response.md`.
-  - Authored complete documentation for `deploy.md`.
+  - Authored complete documentation for `EVAL_RESPONSE.md`.
+  - Authored complete documentation for `DEPLOY.md`.
   - Prepared full documentation for `USER_FEEDBACK_NEEDS.md`.
   - Prepared full documentation for `MVP_FOLLOWUP.md`.
 - **Deployment:**  
