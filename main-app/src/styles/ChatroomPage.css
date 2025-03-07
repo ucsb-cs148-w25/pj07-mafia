@@ -9,19 +9,175 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f9ecd2;
+  background: #f9ecd2; /* same as before */
 }
 
-/* Header */
+/* The top header is full width */
 .chatroom-header {
-  padding: 10px 20px;
+  /* same radial gradient, color, font, etc. */
   background: radial-gradient(circle, #680707, #3e0303);
   color: #ecd9b2;
-  font-size: 1.5rem;
   font-family: 'gothic';
   letter-spacing: 3px;
-  text-align: center;
+  font-size: 1.5rem;
+  padding: 10px 20px;
   position: relative;
+  text-align: center;
+}
+
+/* The main body is a flex row: left = sidebar, right = chat content */
+.chatroom-body {
+  display: flex;
+  flex: 1;           /* fill remaining vertical space */
+  min-height: 0;     /* allow children to flex properly */
+}
+
+/***** SIDEBAR *****/
+.sidebar {
+  background-color: #f9ecd2;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  /* Day mode: add shadow to top and right edges */
+  box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.3), 4px 0px 6px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar.closed {
+  width: 0;
+}
+
+/* Sidebar header: same styling as chatroom-header */
+.sidebar-header {
+  background: radial-gradient(circle, #680707, #3e0303);
+  color: #ecd9b2;
+  font-family: 'gothic';
+  letter-spacing: 3px;
+  font-size: 1.5rem;    /* match .chatroom-header font size if you like */
+  padding: 10px 20px;
+  text-align: center;
+}
+
+/* Sidebar content below the header */
+.sidebar-content {
+  padding: 15px;
+  color: #110101;
+  font-family: serif;
+  overflow-y: auto;
+}
+
+/* Container for the two dropdown entries */
+.role-info-container {
+  margin: 10px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Common styling for each dropdown entry */
+.dropdown-entry {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Header that acts as the toggle for each dropdown */
+.dropdown-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  padding: 13px 10px;
+  gap: 5px; 
+  /* Remove any extra top border */
+  border-top: none;
+}
+
+/* Title in the dropdown header */
+.dropdown-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  line-height: 1.2;
+  font-size: 1.1rem; 
+}
+
+.role-mafia .role-name {
+  color: #ff0000; /* Bright red for emphasis */
+  font-weight: bold;
+}
+
+.role-villager .role-name{
+  color: #06bc15; /* Green for Villager/Non-Mafia */
+  font-weight: bold;
+}
+
+/* Icon for the dropdown toggle */
+.dropdown-icon {
+  order: -1;
+  text-align: center;
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+/* Container for the dropdown content */
+.dropdown-content {
+  padding: 5px 10px;
+  box-sizing: border-box;
+}
+
+/* Specific styling for role-specific rules text */
+.role-rules {
+  font-family: serif;
+  font-size: 1rem;
+  padding-left: 20px;
+  color: inherit;
+}
+
+/* Specific styling for full rule text */
+.full-rule-text {
+  font-family: serif;
+  font-size: 1rem;
+  padding-left: 10px;
+  color: inherit;
+}
+
+.return-home-button {
+  width: 100%;
+  background-color: inherit;
+  color: inherit;
+  font-family: 'serif';
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 10px 0;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding-left: 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: left;
+  justify-content: left;
+  gap: 10px; /* Space between icon and text */
+}
+
+.return-home-button:hover {
+  background-color: #f7e5bf;
+}
+
+.home-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/***** CHAT CONTENT (right side) *****/
+.chat-content {
+  flex: 1;             /* fill remaining horizontal space */
+  display: flex;
+  flex-direction: column;
 }
 
 /* Positions the timer on the right */
@@ -33,28 +189,6 @@
   font-size: 2rem;
   font-family: 'gothic';
   letter-spacing: 3px;
-}
-
-/* Back to Home button */
-.back-button {
-  position: absolute;
-  left: 15px;
-  top: 15px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  background-color: #911b0e;
-  color: #f9ecd2;
-  border: none;
-  cursor: pointer;
-  font-family: 'gothic';
-  letter-spacing: 2px;
-  font-weight: 600;
-  font-size: 1.15rem;
-}
-
-.back-button:hover {
-  background-color: #64170e;
-  color: #f9ecd2;
 }
 
 /* .timer-display {
@@ -133,26 +267,6 @@
 
 .chatroom-send-button:hover {
   background-color: #64170e;
-}
-
-/* Role banner */
-.role-banner {
-  padding: 10px;
-  background-color: #b65303;
-  color: #f9ecd2;
-  text-align: center;
-  font-weight: bold;
-  font-family: 'serif';
-  letter-spacing: 2px;
-  font-size: 1.25rem;
-}
-.role-banner.mafia {
-  background-color: #d7180a;
-}
-.role-name {
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-left: 5px;
 }
 
 .voting-controls {
@@ -237,10 +351,6 @@
   color: #f9ecd2;
 }
 
-.night-mode .role-banner {
-  background-color: #732800;
-}
-
 .night-mode .voting-controls button.villager-player {
   background-color: #732800;
 }
@@ -249,16 +359,30 @@
   background-color: #7328009e;
 }
 
-.night-mode .role-banner.mafia {
-  background-color: #810b03;
-}
-
 .night-mode .voting-controls button.mafia-player {
   background-color: #810b03;
 }
 
 .night-mode .voting-controls button.mafia-player:hover {
   background-color: #5f0903;
+}
+
+.night-mode .return-home-button:hover {
+  background-color: #1a1919;
+}
+
+.night-mode .sidebar {
+  background-color: #110101;
+  box-shadow: none;
+}
+
+.night-mode .sidebar-header {
+  background: radial-gradient(circle, #470303, #200101);
+  color: #f9ecd2;
+}
+
+.night-mode .role-rules{
+  color: #f9ecd2;
 }
 
 /* Fade in/out animation for the elimination message */
@@ -296,6 +420,41 @@
   opacity: 0.5;
 }
 
+/***** HAMBURGER BUTTON *****/
+.hamburger-button {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.hamburger-icon {
+  display: inline-block;
+  width: 25px;
+  height: 2px;
+  background-color: #ecd9b2;
+  position: relative;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 25px;
+  height: 2px;
+  background-color: #ecd9b2;
+}
+
+.hamburger-icon::before {
+  top: -8px;
+}
+
+.hamburger-icon::after {
+  top: 8px;
+}
 /* .night-mode .role-banner {
   color: #110101;
 } */
