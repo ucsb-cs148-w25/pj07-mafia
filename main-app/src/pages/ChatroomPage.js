@@ -205,85 +205,65 @@ const ChatroomPage = () => {
     };
   }, [role, username]);
 
-  // 9. chatDisabled logic
-  const chatDisabled = isEliminated ||
-    (voteType === "mafia" && isVoting && role?.toLowerCase() !== "mafia") ||
-    isVoteLocked;
+  // 10. handleSendMessage => no local rewriting. Let server handle it for living players.
+  // Also, after sending, do random AI generation for each eliminated player.
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
+    const newText = message.trim();
 
-  // 10. Handle sending a message: filter via Claude then update conversation log.
-  // Also trigger eliminated players’ AI responses if random chance succeeds.
-  const handleSendMessage = async () => {
-    if (!message.trim() || chatDisabled) return;
-    try {
-      // First, call the rewrite endpoint to get the filtered message.
-      const response = await fetch(`${config.backendUrl}/api/claude/rewrite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message.trim() }),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        const rewrittenMessage = data.rewrittenMessage;
-  
-        if (rewrittenMessage) {
-          // Emit the filtered message to the chatroom.
-          socket.emit("sendMessage", { lobbyId, text: rewrittenMessage, senderName: username });
-          // Create the new log entry.
-          const newEntry = { sender: username, content: rewrittenMessage };
-          // Update the conversation log.
-          const updatedLog = [...conversationLog, newEntry];
-          // Only trigger AI responses if this new entry was sent by the current user.
-          if (newEntry.sender === username) {
-            let currentThres = thres;
-            eliminatedPlayers.forEach((elim) => {
-              const R = Math.random();
-              console.log(`[AI GENERATION] R = ${R}`);
-              if (R > currentThres) {
-                console.log(`[AI GENERATION] R is bigger than the threshold = ${currentThres}, expect AI message from player ${elim}`);
-                currentThres = currentThres + 0.1;
-                const conversationText = updatedLog
-                  .map((msg) => `sender: ${msg.sender}, content: ${msg.content}`)
-                  .join("\n");
-  
-                // Call the genResponse endpoint.
-                fetch(`${config.backendUrl}/api/claude/genResponse`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    conversationText,
-                    eliminatedPlayerName: elim,
-                  }),
-                })
-                  .then((res) => res.json())
-                  .then((result) => {
-                    if (result.responseText) {
-                      // Emit the generated message as if sent by the eliminated player.
-                      socket.emit("sendMessage", { lobbyId, text: result.responseText, senderName: elim });
-                      // Update the conversation log with this new message.
-                      setConversationLog((prevLog) => [
-                        ...prevLog,
-                        { sender: elim, content: result.responseText },
-                      ]);
-                    }
-                  })
-                  .catch((err) => {
-                    console.error("Error generating response for eliminated player", elim, err);
-                  });
-              }
-            });
-          }
-          setMessage(""); // Clear the input field.
-        } else {
-          console.error("No rewrittenMessage found in the response");
-        }
-      } else {
-        const errorData = await response.json();
-        console.error("Error:", errorData.error);
-      }
-    } catch (error) {
-      console.error("Error calling Claude API:", error);
+    // If I'm alive => "sendMessage"
+    // If I'm dead => "sendGhostMessage"
+    if (!isEliminated) {
+      socket.emit("sendMessage", { lobbyId, text: newText, senderName: username });
+    } else {
+      socket.emit("sendGhostMessage", { lobbyId, text: newText });
     }
+
+    // If it's day and not system => add to conversation log
+    if (currentPhase === "day") {
+      const newEntry = { sender: username, content: newText };
+      const updatedLog = [...conversationLog, newEntry];
+      setConversationLog(updatedLog);
+
+      // Attempt random AI for each eliminated player
+      let localThres = thres;
+      eliminatedPlayers.forEach(deadName => {
+        const R = Math.random();
+        if (R > localThres) {
+          localThres += 0.1; // increment threshold or your chosen logic
+          console.log(`[AI GEN] chance triggered for ${deadName}`);
+          const conversationText = updatedLog
+            .map(msg => `sender: ${msg.sender}, content: ${msg.content}`)
+            .join("\n");
+
+          // call genResponse to get an AI message
+          fetch(`${config.backendUrl}/api/claude/genResponse`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversationText,
+              eliminatedPlayerName: deadName,
+            }),
+          })
+          .then(res => res.json())
+          .then((result) => {
+            if (result.responseText) {
+              // Now we want the AI to speak as "deadName" in the main chat, ignoring isAlive
+              socket.emit("sendAiMessage", {
+                lobbyId,
+                text: result.responseText,
+                eliminatedPlayerName: deadName
+              });
+            }
+          })
+          .catch(err => {
+            console.error("[AI ERROR]", err);
+          });
+        }
+      });
+    }
+
+    setMessage("");
   };
   
 
@@ -488,31 +468,25 @@ const ChatroomPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area (if allowed) */}
-          {!(currentPhase === "voting" || currentPhase === "night") && (
-            <div
-              className={`chatroom-input-container ${
-                isEliminated ? "disabled" : ""
-              }`}
-            >
-              <textarea
-                className="chatroom-input"
-                rows="4"
-                placeholder="Type your message..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <button className="chatroom-send-button" onClick={handleSendMessage}>
-                Send
-              </button>
-            </div>
-          )}
+          {/* Chat Input - always shown. Optionally disable if you want for eliminated players. */}
+          <div className={`chatroom-input-container`}>
+            <textarea
+              className="chatroom-input"
+              rows="4"
+              placeholder="Type your message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <button className="chatroom-send-button" onClick={handleSendMessage}>
+              Send
+            </button>
+          </div>
 
           {/* Voting popup */}
           {isVoting && !isEliminated && (
