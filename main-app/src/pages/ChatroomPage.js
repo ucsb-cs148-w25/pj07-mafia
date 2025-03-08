@@ -181,44 +181,15 @@ const ChatroomPage = () => {
     };
   }, [role, username]);
 
-  // 9. chatDisabled logic
-  const chatDisabled = isEliminated ||
-    (voteType === "mafia" && isVoting && role?.toLowerCase() !== "mafia") ||
-    isVoteLocked;
+  // 9. handleSendMessage => *always* send raw message to the server
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
 
-  // 10. handleSendMessage
-  const handleSendMessage = async () => {
-    if (!message.trim() || chatDisabled) return;
-  
-    try {
-      const response = await fetch('http://localhost:5001/api/claude/rewrite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: message.trim() }),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        console.log("API Response:", data); // Log the entire response to see its structure
-        const rewrittenMessage = data.rewrittenMessage;
-  
-        if (rewrittenMessage) {
-          socket.emit("sendMessage", { lobbyId, text: rewrittenMessage });
-          setMessage(""); // Clear the message input
-        } else {
-          console.error("No rewrittenMessage found in the response");
-        }
-      } else {
-        const errorData = await response.json();
-        console.error("Error:", errorData.error);
-      }
-    } catch (error) {
-      console.error("Error calling Claude API:", error);
-    }
+    // We do NOT call Claude or disable chat on the frontend anymore.
+    // The server decides who sees what & does rewriting if needed.
+    socket.emit("sendMessage", { lobbyId, text: message.trim() });
+    setMessage(""); // clear input
   };
-  
 
   // const handleSendMessage = () => {
   //   if (!message.trim() || chatDisabled) return;
@@ -452,31 +423,25 @@ const ChatroomPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area (if allowed) */}
-          {!(currentPhase === "voting" || currentPhase === "night") && (
-            <div
-              className={`chatroom-input-container ${
-                isEliminated ? "disabled" : ""
-              }`}
-            >
-              <textarea
-                className="chatroom-input"
-                rows="4"
-                placeholder="Type your message..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <button className="chatroom-send-button" onClick={handleSendMessage}>
-                Send
-              </button>
-            </div>
-          )}
+          {/* Chat Input - always shown. Optionally disable if you want for eliminated players. */}
+          <div className={`chatroom-input-container`}>
+            <textarea
+              className="chatroom-input"
+              rows="4"
+              placeholder="Type your message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <button className="chatroom-send-button" onClick={handleSendMessage}>
+              Send
+            </button>
+          </div>
 
           {/* Voting popup */}
           {isVoting && !isEliminated && (

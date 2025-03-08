@@ -9,6 +9,7 @@ Broadcast messages to all users in a chatroom.
 Notify when users join or leave the chat.
 */
 const lobbyService = require('../services/lobbyService');
+const { rewriteMessage } = require('../services/claudeService');
 
 function initChatSocket(io) {
   io.on('connection', (socket) => {
@@ -66,31 +67,84 @@ function initChatSocket(io) {
       }
     });
 
-    // 3. sendMessage => skip if not alive
-    socket.on('sendMessage', ({ lobbyId, text }) => {
+    // 3. sendMessage
+    socket.on("sendMessage", async ({ lobbyId, text }) => {
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
-        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
+        return socket.emit("lobbyError", { message: "Lobby not found." });
       }
 
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
-        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
+        return socket.emit("lobbyError", { message: "Player not in this lobby." });
       }
 
+      // Check if the user is alive
       if (!player.isAlive) {
-        console.log(`[DEBUG] ${player.username} tried to chat but is eliminated.`);
-        return; 
+        // 3a. Dead => no rewrite, only visible to dead
+        console.log(`[CHAT] Dead player ${player.username} => broadcast only to dead players (no AI rewrite).`);
+        const deadMsgObj = {
+          text,
+          sender: player.username,
+          timestamp: new Date(),
+          isDead: true
+        };
+
+        // Send to all dead players (including sender)
+        lobby.players.forEach((pl) => {
+          if (!pl.isAlive) {
+            io.to(pl.socketId).emit("message", deadMsgObj);
+          }
+        });
+        return;
       }
 
-      const msgObj = {
-        text,
+      // 3b. If player is alive => check if they are Mafia or not
+      const isMafia = player.role?.toLowerCase() === "mafia";
+      let finalText = text;
+
+      // Skip rewriting if Mafia; otherwise call Claude
+      if (!isMafia) {
+        try {
+          finalText = await rewriteWithClaude(text);
+        } catch (err) {
+          console.error("[CHAT] Claude rewriting failed. Using original text:", err);
+          finalText = text;
+        }
+      }
+
+      const aliveMsgObj = {
+        text: finalText,
         sender: player.username,
         timestamp: new Date(),
+        isDead: false
       };
 
-      io.to(lobbyId).emit('message', msgObj);
-      console.log(`Message from ${player.username} in lobby ${lobbyId}: ${text}`);
+      // 3c. Distribute message to the correct group, based on phase & role
+      const { phase } = lobby;
+
+      if (phase === "day" || phase === "voting") {
+        // All alive players see each other's messages
+        lobby.players.forEach((pl) => {
+          if (pl.isAlive) {
+            io.to(pl.socketId).emit("message", aliveMsgObj);
+          }
+        });
+
+      } else if (phase === "night") {
+        // NIGHT
+        if (isMafia) {
+          // Mafia => broadcast among alive mafia members
+          lobby.players.forEach((pl) => {
+            if (pl.isAlive && pl.role?.toLowerCase() === "mafia") {
+              io.to(pl.socketId).emit("message", aliveMsgObj);
+            }
+          });
+        } else {
+          // Non-mafia sees only their own message
+          io.to(player.socketId).emit("message", aliveMsgObj);
+        }
+      }
     });
 
     // 4. leaveChatroom
@@ -109,6 +163,12 @@ function initChatSocket(io) {
       console.log('User disconnected from chatroom:', socket.id);
     });
   });
+}
+
+// Helper function that calls your claudeService directly
+async function rewriteWithClaude(originalText) {
+  // We just reuse your rewriteMessage function from claudeService
+  return await rewriteMessage(originalText);
 }
 
 module.exports = { initChatSocket };
