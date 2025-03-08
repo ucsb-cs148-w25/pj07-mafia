@@ -73,9 +73,10 @@ const ChatroomPage = () => {
     const handleMessage = (m) => {
       debugLog("message", m);
       setMessages((prev) => [...prev, m]);
-      // Assume the API–filtered message is in m.text.
-      if (m.sender !== "System"){
-        setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
+      if (currentPhase === "day"){ //only updates log during the day (for future mafia discussion integration)
+        if (m.sender !== "System"){
+          setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
+        }
       }
     };
     socket.on("message", handleMessage);
@@ -231,11 +232,13 @@ const ChatroomPage = () => {
           const updatedLog = [...conversationLog, newEntry];
           // Only trigger AI responses if this new entry was sent by the current user.
           if (newEntry.sender === username) {
+            let currentThres = thres;
             eliminatedPlayers.forEach((elim) => {
               const R = Math.random();
-              console.log(`[AI] R = ${R}`);
-              if (R > thres) {
-                console.log(`[AI] R is bigger than the threshold, expect AI message from player ${elim}`);
+              console.log(`[AI GENERATION] R = ${R}`);
+              if (R > currentThres) {
+                console.log(`[AI GENERATION] R is bigger than the threshold = ${currentThres}, expect AI message from player ${elim}`);
+                currentThres = currentThres + 0.1;
                 const conversationText = updatedLog
                   .map((msg) => `sender: ${msg.sender}, content: ${msg.content}`)
                   .join("\n");
