@@ -1,9 +1,9 @@
 const { VOTING_DURATION, NIGHT_DURATION } = require("../constants");
 const VotingService = require("../services/votingService");
 
-// Object to track if a vote has already been ended
+
 const endedVotes = {};
-const processedNightResults = {}; // Track if night results have been processed for a lobby
+const processedNightResults = {};
 
 // Process night results when all roles have voted
 function processNightResults(io, lobbyId) {
@@ -104,9 +104,7 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
       // Send to everyone in the lobby, and let clients filter
       io.to(lobbyId).emit("detective_result", detectiveMsg);
       
-      // IMPORTANT: Don't set eliminated player for detective votes!
-      // This was causing players to be eliminated when they were investigated
-      return; // Don't continue with normal elimination logic
+      return;
     }
     
     // Handle night results
@@ -138,7 +136,6 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   io.to(lobbyId).emit("voting_complete", { eliminated });
 
   // Only send a system message for day phase voting or if it's a standalone mafia vote
-  // (Doctor and Detective votes don't need system messages)
   if (voteType === "villager" || voteType === "mafia") {
     // Create a message regardless of whether a player was eliminated
     let msg;
@@ -173,7 +170,6 @@ function initVotingSocket(io) {
       }
     });
     
-    // We'll capture the username in submit_vote handler
 
     // Handler for starting a vote
     socket.on("start_vote", ({ lobbyId, voteType }) => {
@@ -449,63 +445,84 @@ function initVotingSocket(io) {
           VotingService.removeVotingSession(lobbyId, sessionIndex);
         }
       }
+      else if (voteType === "villager") {
+        // Fix for day phase voting - collect votes directly
+        if (target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+          console.log(`[VOTING] Day phase vote from ${voter} for ${target}`);
+          
+          // Make sure the vote gets recorded
+          VotingService.castVote(lobbyId, voteId, voter, target);
+        }
+        
+        // Only end the session if all expected votes have been cast
+        const allVoters = session ? session.voters.size : 0;
+        const votesCast = session ? Object.keys(session.votes).length : 0;
+        
+        console.log(`[VOTING] Day phase vote status - ${votesCast} votes cast out of ${allVoters} voters`);
+        
+        // End voting session if all votes are in
+        if (session && votesCast === allVoters) {
+          console.log(`[VOTING] All day phase votes received. Processing results.`);
+          endVotingSession(io, lobbyId, voteId, voteType);
+        }
+      }
       else {
-        // REGULAR VOTING (day phase) - Process immediately with elimination
+        // Handle any other vote types
+        console.log(`[VOTING] Processing unknown vote type: ${voteType}`);
         endVotingSession(io, lobbyId, voteId, voteType);
       }
-        
-        // Check if all night votes have been cast to determine night results
-        if (voteType !== "villager") {
-          const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
-          if (allNightVotesComplete) {
-            console.log("[VOTING] All night role votes completed. Processing night results immediately.");
+      
+      // Check if all night votes have been cast to determine night results
+      if (voteType !== "villager") {
+        const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
+        if (allNightVotesComplete) {
+          console.log("[VOTING] All night role votes completed. Processing night results immediately.");
+          
+          // Get the current night votes
+          const nightVotes = VotingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
+          console.log("[VOTING] Night votes to process:", nightVotes);
+          
+          // Process doctor save vs mafia kill
+          let eliminatedPlayer = null;
+          if (nightVotes.mafia && nightVotes.doctor && nightVotes.mafia === nightVotes.doctor) {
+            console.log(`[VOTING] Doctor saved ${nightVotes.mafia} from elimination`);
+            eliminatedPlayer = null; // Doctor saved the player
+          } else if (nightVotes.mafia) {
+            eliminatedPlayer = nightVotes.mafia;
             
-            // Get the current night votes
-            const nightVotes = VotingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
-            console.log("[VOTING] Night votes to process:", nightVotes);
-            
-            // Process doctor save vs mafia kill
-            let eliminatedPlayer = null;
-            if (nightVotes.mafia && nightVotes.doctor && nightVotes.mafia === nightVotes.doctor) {
-              console.log(`[VOTING] Doctor saved ${nightVotes.mafia} from elimination`);
-              eliminatedPlayer = null; // Doctor saved the player
-            } else if (nightVotes.mafia) {
-              eliminatedPlayer = nightVotes.mafia;
-              
-              // Mark player as eliminated in the lobby
-              const lobby = VotingService.getLobby(lobbyId);
-              if (lobby) {
-                const targetPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
-                if (targetPlayer) {
-                  targetPlayer.isAlive = false;
-                  console.log(`[VOTING] Player ${eliminatedPlayer} was eliminated by Mafia`);
-                }
+            // Mark player as eliminated in the lobby
+            const lobby = VotingService.getLobby(lobbyId);
+            if (lobby) {
+              const targetPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
+              if (targetPlayer) {
+                targetPlayer.isAlive = false;
+                console.log(`[VOTING] Player ${eliminatedPlayer} was eliminated by Mafia`);
               }
             }
-            
-            // Broadcast night results to all clients
-            io.to(lobbyId).emit("voting_complete", { 
-              eliminated: eliminatedPlayer,
-              voteType: "night_results"
-            });
-            
-            // Send system message about elimination or no elimination
-            let msg;
-            if (eliminatedPlayer) {
-              msg = `A quiet strike in the dark… a player has been replaced by AI.`;
-            } else {
-              msg = `An eerie silence lingers… all players remain as they are… for now.`;
-            }
-            
-            io.to(lobbyId).emit("message", {
-              sender: "System",
-              text: msg,
-              timestamp: new Date()
-            });
-            
-            // Reset night votes for next night phase
-            VotingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
           }
+          
+          // Broadcast night results to all clients
+          io.to(lobbyId).emit("voting_complete", { 
+            eliminated: eliminatedPlayer,
+            voteType: "night_results"
+          });
+          
+          // Send system message about elimination or no elimination
+          let msg;
+          if (eliminatedPlayer) {
+            msg = `A quiet strike in the dark… a player has been replaced by AI.`;
+          } else {
+            msg = `An eerie silence lingers… all players remain as they are… for now.`;
+          }
+          
+          io.to(lobbyId).emit("message", {
+            sender: "System",
+            text: msg,
+            timestamp: new Date()
+          });
+          
+          // Reset night votes for next night phase
+          VotingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
         }
       }
     });

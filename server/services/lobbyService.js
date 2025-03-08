@@ -119,8 +119,10 @@ function startDayNightCycle(lobbyId) {
           // Remove all remaining voting sessions
           votingService.clearVotingSessions(lobbyId);
           
-          // Check if night results have already been processed
-          if (!votingSocket.processedNightResults[lobbyId]) {
+          // Skip processing entirely if already processed
+          if (votingSocket.processedNightResults[lobbyId]) {
+            console.log(`[LOBBY] Night results already processed for lobby ${lobbyId}, skipping`);
+          } else {
             // Process night results if they haven't been processed yet
             console.log("[LOBBY] Night phase ended, processing results");
             const nightVotes = votingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
@@ -164,8 +166,6 @@ function startDayNightCycle(lobbyId) {
             
             // Mark night results as processed
             votingSocket.processedNightResults[lobbyId] = true;
-          } else {
-            console.log(`[LOBBY] Night results already processed for lobby ${lobbyId}, skipping`);
           }
           
           // Reset night votes for next night phase
