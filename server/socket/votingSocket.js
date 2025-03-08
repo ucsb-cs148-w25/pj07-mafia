@@ -1,4 +1,4 @@
-const { VOTING_DURATION } = require("../constants");
+const { VOTING_DURATION, NIGHT_DURATION } = require("../constants");
 const VotingService = require("../services/votingService");
 
 // Object to track if a vote has already been ended
@@ -254,7 +254,7 @@ function initVotingSocket(io) {
           console.log("[TIMEOUT] Time limit reached. Ending voting session.");
           endVotingSession(io, lobbyId, voteId, voteType);
         }
-      }, VOTING_DURATION * 1000);
+      }, voteType !== "villager" ? (NIGHT_DURATION * 1000) : (VOTING_DURATION * 1000));
     });
 
     // Handler for submitting a vote
@@ -273,13 +273,28 @@ function initVotingSocket(io) {
 
       // Get the session BEFORE casting vote to get the vote type
       const sessionBeforeVote = VotingService.getSession(lobbyId, voteId);
-      if (!sessionBeforeVote) {
-        console.warn(`[VOTING] No valid session found for voteId ${voteId}`);
-        return;
+      
+      // Use client-provided vote type if available, or try to get it from session
+      let voteType = clientVoteType;
+      
+      // If no explicit vote type, try to get it from session
+      if (!voteType && sessionBeforeVote) {
+        voteType = sessionBeforeVote.voteType;
       }
       
-      // Use the client-supplied vote type if available, otherwise use session type
-      const voteType = clientVoteType || sessionBeforeVote.voteType;
+      // If still no vote type, try to infer from the voteId or voterRole
+      if (!voteType) {
+        if (voteId.startsWith('mafia_')) voteType = 'mafia';
+        else if (voteId.startsWith('doctor_')) voteType = 'doctor';
+        else if (voteId.startsWith('detective_')) voteType = 'detective';
+        else if (voterRole) voteType = voterRole.toLowerCase();
+      }
+      
+      // If we still can't determine vote type, log error and return
+      if (!voteType) {
+        console.warn(`[VOTING] Could not determine vote type for vote: ${voter}, ${voteId}`);
+        return;
+      }
       
       console.log(`[VOTING] Processing vote for ${voter}, role: ${voterRole}, vote type: ${voteType}`);
       
@@ -296,55 +311,15 @@ function initVotingSocket(io) {
         return;
       }
 
-      // Special handling for mafia and doctor votes - record them regardless of session
-      if ((voteType === "mafia" || voteType === "doctor") && target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+      // Special handling for all night role votes - record them regardless of session
+      if ((voteType === "mafia" || voteType === "doctor" || voteType === "detective") && target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
         console.log(`[VOTING] Directly recording ${voteType} vote for ${target}`);
         
         // Store the vote in the nightVotes tracking
         VotingService.recordNightVote(lobbyId, voteType, target);
         
-        // Check if all night votes are complete after this vote
-        const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
-        if (allNightVotesComplete) {
-          console.log("[VOTING] All night roles have voted - processing results immediately");
-          
-          // Process night results immediately when all roles vote
-          processNightResults(io, lobbyId);
-        }
-      }
-      
-      // Cast the vote in the session too
-      VotingService.castVote(lobbyId, voteId, voter, target);
-      
-      // Get updated session after vote is cast
-      const session = VotingService.getSession(lobbyId, voteId);
-      if (!session) {
-        console.warn(`[VOTING] Session disappeared after casting vote`);
-        // Still acknowledge the vote even if the session is gone
-        socket.emit("vote_acknowledged", { 
-          voteId: voteId,
-          voteType: voteType
-        });
-        return;
-      }
-      
-      // Only notify the client that cast the vote that their specific vote is complete
-      // This prevents the popup from closing for other roles
-      socket.emit("vote_acknowledged", { 
-        voteId: voteId,
-        voteType: voteType
-      });
-      
-      // Only end the voting session if all votes for THIS TYPE of vote are in
-      if (session && Object.keys(session.votes).length === session.voters.size) {
-        console.log(`[VOTING] All votes submitted for ${voteType}. Processing vote.`);
-        
-        // Different processing based on vote type
-      if (voteType === "detective") {
-        // DETECTIVE VOTES - Send investigation result and don't eliminate
-        console.log(`[VOTING] Processing detective vote from ${voter}`);
-        
-        if (target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+        // Special handling for detective - send the investigation result immediately
+        if (voteType === "detective") {
           // Get the lobby to find player roles
           const lobby = VotingService.getLobby(lobbyId);
           if (lobby) {
@@ -364,9 +339,71 @@ function initVotingSocket(io) {
               };
               
               socket.emit("message", detectiveMsg);
+            }
+          }
+        }
+        
+        // Check if all night votes are complete after this vote
+        const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
+        if (allNightVotesComplete) {
+          console.log("[VOTING] All night roles have voted - processing results immediately");
+          
+          // Process night results immediately when all roles vote
+          processNightResults(io, lobbyId);
+        }
+      }
+      
+      // For direct votes (with custom voteId), we don't need to cast in session
+      let session = null;
+      
+      // Only try to cast vote in session if it's a standard vote (not direct)
+      if (!voteId.includes('_')) {
+        // Cast the vote in the session too
+        VotingService.castVote(lobbyId, voteId, voter, target);
+        
+        // Get updated session after vote is cast
+        session = VotingService.getSession(lobbyId, voteId);
+      }
+      
+      // Always acknowledge the vote to close the popup
+      socket.emit("vote_acknowledged", { 
+        voteId: voteId,
+        voteType: voteType
+      });
+      
+      // Only process standard session votes if we have a valid session
+      if (session && !voteId.includes('_') && Object.keys(session.votes).length === session.voters.size) {
+        console.log(`[VOTING] All votes submitted for ${voteType}. Processing vote.`);
+        
+        // Different processing based on vote type
+      if (voteType === "detective") {
+        // DETECTIVE VOTES - Make sure vote is recorded
+        console.log(`[VOTING] Processing detective vote from ${voter}`);
+        
+        if (target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+          // Make sure the vote is recorded even here as a backup
+          VotingService.recordNightVote(lobbyId, "detective", target);
+          console.log(`[VOTING] Detective vote recorded for ${target} in lobby ${lobbyId} (backup method)`);
+          
+          // Get the lobby to find player roles
+          const lobby = VotingService.getLobby(lobbyId);
+          if (lobby) {
+            const investigatedPlayer = lobby.players.find(p => p.username === target);
+            
+            if (investigatedPlayer) {
+              const isMafia = investigatedPlayer.role.toLowerCase() === "mafia";
+              console.log(`[VOTING] Detective ${voter} investigating ${target}, isMafia: ${isMafia}`);
               
-              // Store the investigation result but don't eliminate anyone
-              VotingService.storeDetectiveResult(lobbyId, target);
+              // Send private message to the detective
+              const roleReveal = isMafia ? "is a Mafia member" : "is not a Mafia member";
+              const detectiveMsg = {
+                sender: "System",
+                text: `Your investigation reveals that ${target} ${roleReveal}.`,
+                timestamp: new Date(),
+                isPrivate: true
+              };
+              
+              socket.emit("message", detectiveMsg);
             } else {
               console.log(`[VOTING] Investigation target ${target} not found`);
             }

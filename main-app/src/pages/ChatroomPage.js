@@ -345,29 +345,15 @@ const ChatroomPage = () => {
         <VotingPopup
           players={players}
           onVote={(targetPlayer) => {
-            debugLog(`Vote submitted for ${targetPlayer}, role=${role}, voteType=${voteType}`);
-            socket.emit("submit_vote", {
-              lobbyId,
-              voteId,
-              voter: username,
-              target: targetPlayer,
-              voterRole: role, // Add the voter's role for verification
-              voteType: voteType // Add the vote type for verification
-            });
-            // Popup will be closed by vote_acknowledged event
+            debugLog(`Vote submitted in ChatroomPage for ${targetPlayer}, role=${role}, voteType=${voteType}`);
+            // The VotingPopup component now handles socket emission directly
+            // No need to emit here, just for logging
           }}
           onClose={() => {
             // Treat cancellation as a vote with a default target value (e.g., "abstain")
-            debugLog(`Vote cancelled by ${username}`);
-            socket.emit("submit_vote", {
-              lobbyId,
-              voteId,
-              voter: username,
-              target: "s3cr3t_1nv1s1bl3_pl@y3r",
-              voterRole: role, // Add the voter's role for verification
-              voteType: voteType // Add the vote type for verification
-            });
-            // Popup will be closed by vote_acknowledged event
+            debugLog(`Vote cancelled in ChatroomPage by ${username}`);
+            // The VotingPopup component now handles socket emission directly
+            // No need to emit here, just for logging
           }}
           role={voteType.charAt(0).toUpperCase() + voteType.slice(1)}
           username={username}
