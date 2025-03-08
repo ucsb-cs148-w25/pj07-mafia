@@ -6,6 +6,9 @@ const { v4: uuidv4 } = require("uuid");
 
 const votingSessions = {};        // { [lobbyId]: VotingSession[] }
 const eliminatedPlayers = {};     // { [lobbyId]: Set of usernames }
+const doctorSavedPlayers = {};    // { [lobbyId]: Username of the saved player }
+const nightVotes = {};            // { [lobbyId]: { mafia: String, doctor: String, detective: String } }
+const detectiveResults = {};      // { [lobbyId]: String } - Stores the player investigated by detective
 
 /**
  * startVoting:
@@ -52,7 +55,40 @@ function startVoting(lobbyId, voteType) {
         newSession.voters.add(player.username);
       }
     });
+  } else if (voteType === "doctor") {
+    // Populate candidates: every alive player
+    lobby.players.forEach(player => {
+      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+        newSession.players.add(player.username);
+      }
+    });
+
+    // Populate voters: only doctor should vote
+    lobby.players.forEach(player => {
+      if (player.isAlive &&
+          !eliminatedPlayers[lobbyId].has(player.username) &&
+          player.role && player.role.toLowerCase() === "doctor") {
+        newSession.voters.add(player.username);
+      }
+    });
+  } else if (voteType === "detective") {
+    // Populate candidates: every alive player
+    lobby.players.forEach(player => {
+      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+        newSession.players.add(player.username);
+      }
+    });
+
+    // Populate voters: only detective should vote
+    lobby.players.forEach(player => {
+      if (player.isAlive &&
+          !eliminatedPlayers[lobbyId].has(player.username) &&
+          player.role && player.role.toLowerCase() === "detective") {
+        newSession.voters.add(player.username);
+      }
+    });
   } else {
+    // villager voting (day phase)
     lobby.players.forEach(player => {
       if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
         newSession.players.add(player.username);
@@ -139,11 +175,121 @@ function endVoting(lobbyId, voteId) {
   const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
   if (sessionIndex === -1 || sessionIndex === undefined) return null;
 
+  const session = votingSessions[lobbyId][sessionIndex];
+  const voteType = session.voteType;
   const eliminatedPlayer = calculateResults(lobbyId, voteId);
 
-  if (eliminatedPlayer) {
-    eliminatedPlayers[lobbyId].add(eliminatedPlayer);
+  // Initialize nightVotes object for this lobby if it doesn't exist
+  if (!nightVotes[lobbyId]) {
+    nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+  }
 
+  // Handle different vote types
+  if (voteType === "mafia") {
+    // Store mafia vote, but don't eliminate yet
+    if (eliminatedPlayer) {
+      nightVotes[lobbyId].mafia = eliminatedPlayer;
+      console.log(`[VOTING] Mafia selected ${eliminatedPlayer} to eliminate`);
+    }
+  } else if (voteType === "doctor") {
+    // Store doctor vote
+    if (eliminatedPlayer) {
+      nightVotes[lobbyId].doctor = eliminatedPlayer;
+      console.log(`[VOTING] Doctor selected ${eliminatedPlayer} to save`);
+    }
+  } else if (voteType === "detective") {
+    // This section is now handled directly in the socket handler
+    // We no longer process detective votes here
+    console.log(`[VOTING] Detective vote processing skipped in endVoting - handled separately now`);
+    return null;
+  } else {
+    // Regular voting (day phase)
+    if (eliminatedPlayer) {
+      eliminatedPlayers[lobbyId].add(eliminatedPlayer);
+
+      // Mark them as not alive in the lobby
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        const p = lobby.players.find((pl) => pl.username === eliminatedPlayer);
+        if (p) {
+          p.isAlive = false;
+        }
+      }
+    }
+  }
+
+  // Remove session
+  votingSessions[lobbyId].splice(sessionIndex, 1);
+  
+  // Check if all night phase votes are complete
+  if (voteType !== "villager") {
+    const allVotesComplete = checkAllNightVotesComplete(lobbyId);
+    if (allVotesComplete) {
+      return processNightResults(lobbyId);
+    }
+  }
+  
+  return eliminatedPlayer;
+}
+
+// Helper function to check if all night votes have been cast
+function checkAllNightVotesComplete(lobbyId) {
+  // Get lobby to check which roles exist
+  const lobby = lobbyService.getLobby(lobbyId);
+  if (!lobby) {
+    console.log('[VOTING] No lobby found for checking night votes completion');
+    return false;
+  }
+  
+  // Check if votes object exists
+  if (!nightVotes[lobbyId]) {
+    console.log('[VOTING] No night votes object exists for lobby');
+    nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+  }
+  
+  // Required votes
+  let mafiaExists = false;
+  let doctorExists = false;
+  let detectiveExists = false;
+  
+  // Check which roles exist in the game
+  lobby.players.forEach(player => {
+    if (player.isAlive) {
+      if (player.role?.toLowerCase() === "mafia") mafiaExists = true;
+      if (player.role?.toLowerCase() === "doctor") doctorExists = true;
+      if (player.role?.toLowerCase() === "detective") detectiveExists = true;
+    }
+  });
+  
+  console.log(`[VOTING] Alive roles in game - Mafia: ${mafiaExists}, Doctor: ${doctorExists}, Detective: ${detectiveExists}`);
+  console.log(`[VOTING] Current votes - Mafia: ${nightVotes[lobbyId].mafia}, Doctor: ${nightVotes[lobbyId].doctor}, Detective: ${nightVotes[lobbyId].detective}`);
+  
+  // Check if all roles have voted or abstained
+  const mafiaVoted = !mafiaExists || nightVotes[lobbyId].mafia !== null;
+  const doctorVoted = !doctorExists || nightVotes[lobbyId].doctor !== null;
+  const detectiveVoted = !detectiveExists || nightVotes[lobbyId].detective !== null;
+  
+  console.log(`[VOTING] Night votes status - Mafia: ${mafiaVoted}, Doctor: ${doctorVoted}, Detective: ${detectiveVoted}`);
+  
+  return mafiaVoted && doctorVoted && detectiveVoted;
+}
+
+// Process the results of all night votes
+function processNightResults(lobbyId) {
+  const votes = nightVotes[lobbyId];
+  if (!votes) return null;
+  
+  let eliminatedPlayer = null;
+  
+  // Check if doctor saved the mafia target
+  if (votes.mafia && votes.doctor && votes.mafia === votes.doctor) {
+    console.log(`[VOTING] Doctor saved ${votes.mafia} from elimination`);
+    eliminatedPlayer = null; // No elimination if doctor saved the target
+  } else if (votes.mafia) {
+    // Mafia kill proceeds if no doctor save
+    eliminatedPlayer = votes.mafia;
+    eliminatedPlayers[lobbyId].add(eliminatedPlayer);
+    
     // Mark them as not alive in the lobby
     const lobby = lobbyService.getLobby(lobbyId);
     if (lobby) {
@@ -152,11 +298,18 @@ function endVoting(lobbyId, voteId) {
         p.isAlive = false;
       }
     }
+    console.log(`[VOTING] Player ${eliminatedPlayer} was eliminated by the Mafia`);
   }
-
-  // Remove session
-  votingSessions[lobbyId].splice(sessionIndex, 1);
-  return eliminatedPlayer;
+  
+  // Reset night votes for next night
+  nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+  
+  // Return necessary information about night results
+  return {
+    type: "night_results",
+    eliminated: eliminatedPlayer,
+    detectiveTarget: votes.detective
+  };
 }
 
 function getVotingSessions(lobbyId) {
@@ -167,10 +320,70 @@ function getSession(lobbyId, voteId) {
   return votingSessions[lobbyId]?.find((s) => s.voteId === voteId) || null;
 }
 
+function storeDetectiveResult(lobbyId, target) {
+  if (!nightVotes[lobbyId]) {
+    nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+  }
+  
+  nightVotes[lobbyId].detective = target;
+  detectiveResults[lobbyId] = target;
+  console.log(`[VOTING] Detective result stored: ${target} in lobby ${lobbyId}`);
+  return true;
+}
+
+function recordNightVote(lobbyId, voteType, target) {
+  if (!nightVotes[lobbyId]) {
+    nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+  }
+  
+  nightVotes[lobbyId][voteType] = target;
+  console.log(`[VOTING] ${voteType} vote recorded: ${target} in lobby ${lobbyId}`);
+  return true;
+}
+
+function getVotingSessionIndex(lobbyId, voteId) {
+  if (!votingSessions[lobbyId]) return -1;
+  
+  const index = votingSessions[lobbyId].findIndex((s) => s.voteId === voteId);
+  console.log(`[VOTING] Found voting session index ${index} for voteId ${voteId}`);
+  return index; // Will be -1 if not found
+}
+
+function removeVotingSession(lobbyId, sessionIndex) {
+  if (sessionIndex !== -1 && votingSessions[lobbyId] && sessionIndex < votingSessions[lobbyId].length) {
+    console.log(`[VOTING] Removing voting session at index ${sessionIndex} in lobby ${lobbyId}`);
+    votingSessions[lobbyId].splice(sessionIndex, 1);
+    return true;
+  }
+  return false;
+}
+
+function clearVotingSessions(lobbyId) {
+  if (votingSessions[lobbyId]) {
+    console.log(`[VOTING] Clearing all voting sessions for lobby ${lobbyId}`);
+    votingSessions[lobbyId] = [];
+    return true;
+  }
+  return false;
+}
+
+function getLobby(lobbyId) {
+  return lobbyService.getLobby(lobbyId);
+}
+
 module.exports = {
   startVoting,
   castVote,
   endVoting,
   getVotingSessions,
   getSession,
+  checkAllNightVotesComplete,
+  processNightResults,
+  nightVotes,
+  storeDetectiveResult,
+  recordNightVote,
+  getVotingSessionIndex,
+  removeVotingSession,
+  clearVotingSessions,
+  getLobby
 };

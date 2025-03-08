@@ -30,14 +30,17 @@ const VotingPopup = ({
   // Debug: Log the players list received.
   useEffect(() => {
     console.log("[DEBUG POPUP] Received players list in VotingPopup:", players);
-  }, [players]);
+    console.log("[DEBUG POPUP] Current role in VotingPopup:", role);
+  }, [players, role]);
 
   const filteredPlayers = players
 
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "KILL" : "VOTE"}
+        {role === "Mafia" ? "KILL" : 
+         role === "Doctor" ? "SAVE" :
+         role === "Detective" ? "INVESTIGATE" : "VOTE"}
       </h3>
 
       <select
