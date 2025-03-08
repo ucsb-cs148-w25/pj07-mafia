@@ -267,8 +267,21 @@ function initVotingSocket(io) {
         console.log(`[VOTING] Captured username ${voter} from vote submission for socket ${socket.id}`);
       }
 
+      // Debug log the incoming vote data
+      console.log(`[VOTING] Vote submission received:`, { lobbyId, voteId, voter, target, voterRole, clientVoteType });
+
       // Get the session BEFORE casting vote to get the vote type
       const sessionBeforeVote = VotingService.getSession(lobbyId, voteId);
+      if (sessionBeforeVote) {
+        console.log(`[VOTING] Found session before vote:`, {
+          voteId: sessionBeforeVote.voteId,
+          voteType: sessionBeforeVote.voteType,
+          voters: Array.from(sessionBeforeVote.voters),
+          votes: sessionBeforeVote.votes
+        });
+      } else {
+        console.log(`[VOTING] No session found for voteId: ${voteId}`);
+      }
       
       // Use client-provided vote type if available, or try to get it from session
       let voteType = clientVoteType;
@@ -452,6 +465,15 @@ function initVotingSocket(io) {
           
           // Make sure the vote gets recorded
           VotingService.castVote(lobbyId, voteId, voter, target);
+          
+          // Get updated session after vote cast
+          session = VotingService.getSession(lobbyId, voteId);
+          
+          if (session) {
+            // Debugging - dump the current votes
+            console.log(`[VOTING] After recording vote - Session votes:`, session.votes);
+            console.log(`[VOTING] Voters in session:`, Array.from(session.voters));
+          }
         }
         
         // Only end the session if all expected votes have been cast
@@ -463,6 +485,8 @@ function initVotingSocket(io) {
         // End voting session if all votes are in
         if (session && votesCast === allVoters) {
           console.log(`[VOTING] All day phase votes received. Processing results.`);
+          // Force a final check of votes before ending
+          console.log(`[VOTING] Final votes before processing:`, session.votes);
           endVotingSession(io, lobbyId, voteId, voteType);
         }
       }
@@ -471,60 +495,18 @@ function initVotingSocket(io) {
         console.log(`[VOTING] Processing unknown vote type: ${voteType}`);
         endVotingSession(io, lobbyId, voteId, voteType);
       }
+    } // <-- Added missing closing brace here for the if statement that started on line 371
       
-      // Check if all night votes have been cast to determine night results
-      if (voteType !== "villager") {
-        const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
-        if (allNightVotesComplete) {
-          console.log("[VOTING] All night role votes completed. Processing night results immediately.");
-          
-          // Get the current night votes
-          const nightVotes = VotingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
-          console.log("[VOTING] Night votes to process:", nightVotes);
-          
-          // Process doctor save vs mafia kill
-          let eliminatedPlayer = null;
-          if (nightVotes.mafia && nightVotes.doctor && nightVotes.mafia === nightVotes.doctor) {
-            console.log(`[VOTING] Doctor saved ${nightVotes.mafia} from elimination`);
-            eliminatedPlayer = null; // Doctor saved the player
-          } else if (nightVotes.mafia) {
-            eliminatedPlayer = nightVotes.mafia;
-            
-            // Mark player as eliminated in the lobby
-            const lobby = VotingService.getLobby(lobbyId);
-            if (lobby) {
-              const targetPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
-              if (targetPlayer) {
-                targetPlayer.isAlive = false;
-                console.log(`[VOTING] Player ${eliminatedPlayer} was eliminated by Mafia`);
-              }
-            }
-          }
-          
-          // Broadcast night results to all clients
-          io.to(lobbyId).emit("voting_complete", { 
-            eliminated: eliminatedPlayer,
-            voteType: "night_results"
-          });
-          
-          // Send system message about elimination or no elimination
-          let msg;
-          if (eliminatedPlayer) {
-            msg = `A quiet strike in the dark… a player has been replaced by AI.`;
-          } else {
-            msg = `An eerie silence lingers… all players remain as they are… for now.`;
-          }
-          
-          io.to(lobbyId).emit("message", {
-            sender: "System",
-            text: msg,
-            timestamp: new Date()
-          });
-          
-          // Reset night votes for next night phase
-          VotingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
-        }
+    // We'll only check for night votes completion if we haven't already processed
+    // the results through processNightResults function
+    if (voteType !== "villager" && !processedNightResults[lobbyId]) {
+      const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
+      if (allNightVotesComplete) {
+        console.log("[VOTING] All night role votes completed. Processing night results.");
+        // Call the processNightResults function which handles all the night results logic
+        processNightResults(io, lobbyId);
       }
+    }
     });
 
     socket.on("disconnect", () => {
