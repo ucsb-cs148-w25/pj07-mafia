@@ -681,8 +681,6 @@ const ChatroomPage = () => {
             )}
           </div>
         </div>
-      )}
-
       {isVoting && !isEliminated && (
         <VotingPopup
           players={players}
