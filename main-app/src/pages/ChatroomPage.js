@@ -37,6 +37,10 @@ const ChatroomPage = () => {
 
   const [conversationLog, setConversationLog] = useState([]);
   const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
+  
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef(null);
+  const resizeHandleRef = useRef(null);
   // Preset probability threshold (P)
   const thres = config.THRESHOLD;
 
@@ -299,254 +303,295 @@ const ChatroomPage = () => {
     setIsSidebarOpen((prev) => !prev);
   };
 
+  const onMouseDown = (e) => {
+    setIsResizing(true);
+    document.body.style.cursor = 'ew-resize';
+  };
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    const resizeHandle = resizeHandleRef.current;
+
+    const onMouseMove = (e) => {
+      if (isResizing) {
+        const newWidth = e.clientX;
+        if (newWidth >= 150 && newWidth <= 600) {
+          sidebar.style.width = newWidth + 'px';
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+    };
+
+    if (resizeHandle) {
+      resizeHandle.addEventListener('mousedown', onMouseDown);
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      if (resizeHandle) {
+        resizeHandle.removeEventListener('mousedown', onMouseDown);
+      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isResizing]);
+
   return (
-    <div
-      className={`chatroom-container ${
-        currentPhase === "night" ? "night-mode" : ""
-      } ${isEliminated ? "eliminated" : ""}`}
-    >
-      {/* 1) Full-width chatroom header */}
-      <div className="chatroom-header">
-        <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
+    <div className="container">
+      <div
+        className={`chatroom-container ${
+          currentPhase === "night" ? "night-mode" : ""
+        } ${isEliminated ? "eliminated" : ""}`}
+      >
+        {/* 1) Full-width chatroom header */}
+        <div className="chatroom-header">
+          <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
 
-        {/* Hamburger button to toggle sidebar */}
-        <button className="hamburger-button" onClick={toggleSidebar}>
-          <span className="hamburger-icon" />
-        </button>
+          {/* Hamburger button to toggle sidebar */}
+          <button className="hamburger-button" onClick={toggleSidebar}>
+            <span className="hamburger-icon" />
+          </button>
 
-        <div className="phase-timer">{formatTime(timeLeft)}</div>
-      </div>
+          <div className="phase-timer">{formatTime(timeLeft)}</div>
+        </div>
 
-      {/* 2) Body container: flex row => sidebar + chat content */}
-      <div className="chatroom-body">
+        {/* 2) Body container: flex row => sidebar + chat content */}
+        <div className="chatroom-body">
 
-        {/* Sidebar */}
-        <div className={`sidebar ${isSidebarOpen ? "open" : "closed"}`} style={{ overflowY: "auto" }}>
-
-          {/* Dropdown entries container */}
-          <div className="role-info-container">
-            {role && (
+          {/* Sidebar */}
+          <div ref={sidebarRef} className={`sidebar ${isSidebarOpen ? "open" : "closed"}`} style={{ overflowY: "auto" }}>
+            <div ref = {resizeHandleRef} className="sidebar-resize-handle"></div>
+            {/* Dropdown entries container */}
+            <div className="role-info-container">
+              {role && (
+                <div className="dropdown-entry">
+                  <div
+                    className="dropdown-header"
+                    onClick={() => setIsRoleDropdownOpen((prev) => !prev)}
+                  >
+                  <div 
+                    className={`dropdown-title ${role && role.toLowerCase() === "mafia" ? "role-mafia" : "role-villager"}`}
+                  >
+                    <div>Your Role: <span className="role-name">{role}</span></div>
+                  </div>
+                    <div className="dropdown-icon">
+                      {isRoleDropdownOpen ? "▼" : "►"}
+                    </div>
+                  </div>
+                  {isRoleDropdownOpen && (
+                    <div className="role-rules">
+                      {role === "Mafia" && (
+                        <div>
+                          <h3>Mafia Role</h3>
+                          <p>
+                            <strong>Team:</strong> You are on the Mafia team.
+                            <br />
+                            <strong>Objective:</strong> Eliminate all Villagers without being exposed.
+                            <br />
+                            <strong>Actions:</strong> During the night, collaborate secretly with fellow Mafia members to choose a victim. During the day, blend in with others and misdirect suspicion.
+                          </p>
+                        </div>
+                      )}
+                      {role === "Villager" && (
+                        <div>
+                          <h3>Villager Role</h3>
+                          <p>
+                            <strong>Team:</strong> You are on the Villagers team.
+                            <br />
+                            <strong>Objective:</strong> Identify and eliminate the Mafia.
+                            <br />
+                            <strong>Actions:</strong> Participate in daily discussions, share suspicions, and vote to eliminate players who you suspect are Mafia.
+                          </p>
+                        </div>
+                      )}
+                      {role === "Doctor" && (
+                        <div>
+                          <h3>Doctor Role</h3>
+                          <p>
+                            <strong>Team:</strong> You are on the Villagers team.
+                            <br />
+                            <strong>Objective:</strong> Protect Villagers from being eliminated by the Mafia.
+                            <br />
+                            <strong>Actions:</strong> Each night, choose one player to safeguard. Your protection may prevent a Mafia attack if you guess correctly.
+                          </p>
+                        </div>
+                      )}
+                      {role === "Detective" && (
+                        <div>
+                          <h3>Detective Role</h3>
+                          <p>
+                            <strong>Team:</strong> You are on the Villagers team.
+                            <br />
+                            <strong>Objective:</strong> Uncover the identity of the Mafia.
+                            <br />
+                            <strong>Actions:</strong> Every night, investigate a player to gather clues about their role. Use your findings during discussions to help identify Mafia members.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="dropdown-entry">
                 <div
                   className="dropdown-header"
-                  onClick={() => setIsRoleDropdownOpen((prev) => !prev)}
+                  onClick={() => setIsFullRuleDropdownOpen((prev) => !prev)}
                 >
-                <div 
-                  className={`dropdown-title ${role && role.toLowerCase() === "mafia" ? "role-mafia" : "role-villager"}`}
-                >
-                  <div>Your Role: <span className="role-name">{role}</span></div>
-                </div>
+                  <div className="dropdown-title">Game Rules</div>
                   <div className="dropdown-icon">
-                    {isRoleDropdownOpen ? "▼" : "►"}
+                    {isFullRuleDropdownOpen ? "▼" : "►"}
                   </div>
                 </div>
-                {isRoleDropdownOpen && (
-                  <div className="role-rules">
-                    {role === "Mafia" && (
-                      <div>
-                        <h3>Mafia Rules</h3>
-                        <p>
-                          <strong>Team:</strong> You are on the Mafia team.
-                          <br />
-                          <strong>Objective:</strong> Eliminate all Villagers without being exposed.
-                          <br />
-                          <strong>Actions:</strong> During the night, collaborate secretly with fellow Mafia members to choose a victim. During the day, blend in with others and misdirect suspicion.
-                        </p>
-                      </div>
-                    )}
-                    {role === "Villager" && (
-                      <div>
-                        <h3>Villager Rules</h3>
-                        <p>
-                          <strong>Team:</strong> You are on the Villagers team.
-                          <br />
-                          <strong>Objective:</strong> Identify and eliminate the Mafia.
-                          <br />
-                          <strong>Actions:</strong> Participate in daily discussions, share suspicions, and vote to eliminate players who you suspect are Mafia.
-                        </p>
-                      </div>
-                    )}
-                    {role === "Doctor" && (
-                      <div>
-                        <h3>Doctor Rules</h3>
-                        <p>
-                          <strong>Team:</strong> You are on the Villagers team.
-                          <br />
-                          <strong>Objective:</strong> Protect Villagers from being eliminated by the Mafia.
-                          <br />
-                          <strong>Actions:</strong> Each night, choose one player to safeguard. Your protection may prevent a Mafia attack if you guess correctly.
-                        </p>
-                      </div>
-                    )}
-                    {role === "Detective" && (
-                      <div>
-                        <h3>Detective Rules</h3>
-                        <p>
-                          <strong>Team:</strong> You are on the Villagers team.
-                          <br />
-                          <strong>Objective:</strong> Uncover the identity of the Mafia.
-                          <br />
-                          <strong>Actions:</strong> Every night, investigate a player to gather clues about their role. Use your findings during discussions to help identify Mafia members.
-                        </p>
-                      </div>
-                    )}
+                {isFullRuleDropdownOpen && (
+                  <div className="dropdown-content">
+                    <div className="full-rule-text">
+                      <h2>Full Rules of dystopAI</h2>
+                      <p><strong>Game Setup:</strong> This is a normal game of Mafia with the following roles:</p>
+                      <ul>
+                        <li><strong>Villager:</strong> Works with others to identify and eliminate the Mafia.</li>
+                        <li><strong>Mafia:</strong> Secretly works to eliminate the Villagers while staying hidden.</li>
+                        <li><strong>Doctor:</strong> Can protect a player from being eliminated during the night phase.</li>
+                        <li><strong>Inspector:</strong> Investigates players to determine if they might be Mafia.</li>
+                        <li><strong>Detective:</strong> Uses clues and deductions to help identify the Mafia, working closely with the Villagers.</li>
+                      </ul>
+                      <p><strong>Game Phases:</strong></p>
+                      <ol>
+                        <li><em>Night:</em> The Mafia chooses a victim, while the Doctor selects someone to protect. The Inspector and Detective gather information.</li>
+                        <li><em>Day:</em> All players discuss, debate, and vote on who they suspect is Mafia. The player with the majority vote is eliminated.</li>
+                      </ol>
+                      <p><strong>Twists:</strong></p>
+                      <ul>
+                        <li><em>AI Rephrasing:</em> Any text you send during the game will be parsed and rephrased by an AI. This helps maintain consistency in language and style throughout the game.</li>
+                        <li><em>AI Replacement:</em> When you die, you will be replaced by an AI that takes over your character, ensuring the game continues smoothly without interruption.</li>
+                      </ul>
+                      <p>Use strategy, observation, and collaboration to outsmart the opposing side and secure victory!</p>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-            <div className="dropdown-entry">
-              <div
-                className="dropdown-header"
-                onClick={() => setIsFullRuleDropdownOpen((prev) => !prev)}
-              >
-                <div className="dropdown-title">Full Rule</div>
-                <div className="dropdown-icon">
-                  {isFullRuleDropdownOpen ? "▼" : "►"}
-                </div>
-              </div>
-              {isFullRuleDropdownOpen && (
-                <div className="dropdown-content">
-                  <div className="full-rule-text">
-                    <h2>Full Rules of Mafia</h2>
-                    <p><strong>Game Setup:</strong> This is a normal game of Mafia with the following roles:</p>
-                    <ul>
-                      <li><strong>Villager:</strong> Works with others to identify and eliminate the Mafia.</li>
-                      <li><strong>Mafia:</strong> Secretly works to eliminate the Villagers while staying hidden.</li>
-                      <li><strong>Doctor:</strong> Can protect a player from being eliminated during the night phase.</li>
-                      <li><strong>Inspector:</strong> Investigates players to determine if they might be Mafia.</li>
-                      <li><strong>Detective:</strong> Uses clues and deductions to help identify the Mafia, working closely with the Villagers.</li>
-                    </ul>
-                    <p><strong>Game Phases:</strong></p>
-                    <ol>
-                      <li><em>Night:</em> The Mafia chooses a victim, while the Doctor selects someone to protect. The Inspector and Detective gather information.</li>
-                      <li><em>Day:</em> All players discuss, debate, and vote on who they suspect is Mafia. The player with the majority vote is eliminated.</li>
-                    </ol>
-                    <p><strong>Twists:</strong></p>
-                    <ul>
-                      <li><em>AI Rephrasing:</em> Any text you send during the game will be parsed and rephrased by an AI. This helps maintain consistency in language and style throughout the game.</li>
-                      <li><em>AI Replacement:</em> When you die, you will be replaced by an AI that takes over your character, ensuring the game continues smoothly without interruption.</li>
-                    </ul>
-                    <p>Use strategy, observation, and collaboration to outsmart the opposing side and secure victory!</p>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-          {/* Return to Home button */}
-          <button
-            className="return-home-button"
-            onClick={() => {
-              socket.emit("leaveChatroom", { lobbyId, username });
-              navigate("/");
-            }}
-          >
-            <span className="home-icon">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {/* Open door shape */}
-                <rect
-                  x="2"
-                  y="3"
-                  width="10"
-                  height="18"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                {/* Door knob */}
-                <circle cx="10" cy="12" r="1" fill="currentColor" />
-                {/* Arrow pointing outdoors */}
-                <path
-                  d="M14 12H22M18 8L22 12L18 16"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            Return to Home
-          </button>
-        </div>
-
-        {/* --- Main chat content --- */}
-        <div className="chat-content">
-
-          {/* Messages */}
-          <div className="chatroom-messages">
-            {messages.map((m, idx) => (
-              <div key={idx} className="chatroom-message">
-                <span className="chatroom-username">{m.sender}: </span>
-                <span className="chatroom-text">{m.text}</span>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input area (if allowed) */}
-          {!(currentPhase === "voting" || currentPhase === "night") && (
-            <div
-              className={`chatroom-input-container ${
-                isEliminated ? "disabled" : ""
-              }`}
+            {/* Return to Home button */}
+            <button
+              className="return-home-button"
+              onClick={() => {
+                socket.emit("leaveChatroom", { lobbyId, username });
+                navigate("/");
+              }}
             >
-              <textarea
-                className="chatroom-input"
-                rows="4"
-                placeholder="Type your message..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
+              <span className="home-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Open door shape */}
+                  <rect
+                    x="2"
+                    y="3"
+                    width="10"
+                    height="18"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  {/* Door knob */}
+                  <circle cx="10" cy="12" r="1" fill="currentColor" />
+                  {/* Arrow pointing outdoors */}
+                  <path
+                    d="M14 12H22M18 8L22 12L18 16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              Return to Home
+            </button>
+          </div>
+
+          {/* --- Main chat content --- */}
+          <div className="chat-content">
+
+            {/* Messages */}
+            <div className="chatroom-messages">
+              {messages.map((m, idx) => (
+                <div key={idx} className="chatroom-message">
+                  <span className="chatroom-username">{m.sender}: </span>
+                  <span className="chatroom-text">{m.text}</span>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input area (if allowed) */}
+            {!(currentPhase === "voting" || currentPhase === "night") && (
+              <div
+                className={`chatroom-input-container ${
+                  isEliminated ? "disabled" : ""
+                }`}
+              >
+                <textarea
+                  className="chatroom-input"
+                  rows="4"
+                  placeholder="Type your message..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <button className="chatroom-send-button" onClick={handleSendMessage}>
+                  Send
+                </button>
+              </div>
+            )}
+
+            {/* Voting popup */}
+            {isVoting && !isEliminated && (
+              <VotingPopup
+                players={players}
+                onVote={(targetPlayer) => {
+                  socket.emit("submit_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: targetPlayer,
+                  });
+                  setIsVoting(false);
                 }}
+                onClose={() => {
+                  socket.emit("submit_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: "s3cr3t_1nv1s1bl3_pl@y3r",
+                  });
+                  setIsVoting(false);
+                }}
+                role={voteType === "mafia" ? "Mafia" : "Villager"}
+                username={username}
+                lobbyId={lobbyId}
               />
-              <button className="chatroom-send-button" onClick={handleSendMessage}>
-                Send
-              </button>
-            </div>
-          )}
+            )}
 
-          {/* Voting popup */}
-          {isVoting && !isEliminated && (
-            <VotingPopup
-              players={players}
-              onVote={(targetPlayer) => {
-                socket.emit("submit_vote", {
-                  lobbyId,
-                  voteId,
-                  voter: username,
-                  target: targetPlayer,
-                });
-                setIsVoting(false);
-              }}
-              onClose={() => {
-                socket.emit("submit_vote", {
-                  lobbyId,
-                  voteId,
-                  voter: username,
-                  target: "s3cr3t_1nv1s1bl3_pl@y3r",
-                });
-                setIsVoting(false);
-              }}
-              role={voteType === "mafia" ? "Mafia" : "Villager"}
-              username={username}
-              lobbyId={lobbyId}
-            />
-          )}
-
-          {showEliminationMessage && (
-            <div className="elimination-message">
-              Your presence fades into the unknown… AI takes your place.
-            </div>
-          )}
+            {showEliminationMessage && (
+              <div className="elimination-message">
+                Your presence fades into the unknown… AI takes your place.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
