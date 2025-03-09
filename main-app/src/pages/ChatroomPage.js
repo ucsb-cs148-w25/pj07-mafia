@@ -38,6 +38,10 @@ const ChatroomPage = () => {
 
   const [conversationLog, setConversationLog] = useState([]);
   const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
+  
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef(null);
+  const resizeHandleRef = useRef(null);
   // Preset probability threshold (P)
   const thres = config.THRESHOLD;
 
@@ -290,6 +294,45 @@ const ChatroomPage = () => {
     setIsSidebarOpen((prev) => !prev);
   };
 
+  const onMouseDown = (e) => {
+    setIsResizing(true);
+    document.body.style.cursor = 'ew-resize';
+  };
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    const resizeHandle = resizeHandleRef.current;
+
+    const onMouseMove = (e) => {
+      if (isResizing) {
+        const newWidth = e.clientX;
+        if (newWidth >= 150 && newWidth <= 600) {
+          sidebar.style.width = newWidth + 'px';
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+    };
+
+    if (resizeHandle) {
+      resizeHandle.addEventListener('mousedown', onMouseDown);
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      if (resizeHandle) {
+        resizeHandle.removeEventListener('mousedown', onMouseDown);
+      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isResizing]);
+
   return (
     <div
       className={`chatroom-container ${
@@ -300,19 +343,20 @@ const ChatroomPage = () => {
       <div className="chatroom-header">
         <h2>{isEliminated? "404 ZONE" : currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
 
-        {/* Hamburger button to toggle sidebar */}
-        <button className="hamburger-button" onClick={toggleSidebar}>
-          <span className="hamburger-icon" />
-        </button>
+          {/* Hamburger button to toggle sidebar */}
+          <button className="hamburger-button" onClick={toggleSidebar}>
+            <span className="hamburger-icon" />
+          </button>
 
-        <div className="phase-timer">{formatTime(timeLeft)}</div>
-      </div>
+          <div className="phase-timer">{formatTime(timeLeft)}</div>
+        </div>
 
-      {/* 2) Body container: flex row => sidebar + chat content */}
-      <div className="chatroom-body">
+        {/* 2) Body container: flex row => sidebar + chat content */}
+        <div className="chatroom-body">
 
         {/* Sidebar */}
-        <div className={`sidebar ${isSidebarOpen ? "open" : "closed"}`} style={{ overflowY: "auto" }}>
+        <div ref={sidebarRef} className={`sidebar ${isSidebarOpen ? "open" : "closed"}`} style={{ overflowY: "auto" }}>
+        <div ref = {resizeHandleRef} className="sidebar-resize-handle"></div>
 
           {/* Dropdown entries container */}
           <div className="role-info-container">
@@ -499,21 +543,21 @@ const ChatroomPage = () => {
           </button>
         </div>
 
-        {/* --- Main chat content --- */}
-        <div className="chat-content">
+          {/* --- Main chat content --- */}
+          <div className="chat-content">
 
-          {/* Messages */}
-          <div className="chatroom-messages">
-            {messages.map((m, idx) => (
-              <div key={idx} className="chatroom-message">
-                <span className="chatroom-username">{m.sender}: </span>
-                <span className="chatroom-text">{m.text}</span>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            {/* Messages */}
+            <div className="chatroom-messages">
+              {messages.map((m, idx) => (
+                <div key={idx} className="chatroom-message">
+                  <span className="chatroom-username">{m.sender}: </span>
+                  <span className="chatroom-text">{m.text}</span>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
 
-          {showVoteButton && !isVoting && !isEliminated && (
+            {showVoteButton && !isVoting && !isEliminated && (
             <button className="floating-vote-button" onClick={handleVoteButtonClick}>
               {currentPhase === "voting" ? "Vote" : "Kill"}
             </button>

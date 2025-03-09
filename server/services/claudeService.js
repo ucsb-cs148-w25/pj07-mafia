@@ -6,7 +6,7 @@ const apiKey = config.ANTHROPIC_API_KEY;
 
 console.log("API Key loaded:", apiKey ? 'Yes' : 'No');
 
-const rewriteMessage = async (message, instructions = "Rewrite the message while preserving the original tone, style, and level of formality. Maintain any slang, abbreviations, or casual phrasing exactly as they are, ensuring the rewritten version feels natural and authentic. Do not introduce outdated or unnatural slang. Keep capitalization, punctuation, and sentence structure as close to the original as possible while improving clarity if needed.") => {
+const rewriteMessage = async (message, instructions = "Rewrite the message while preserving the original tone, style, and level of formality. Maintain any slang, abbreviations, or casual phrasing exactly as they are, ensuring the rewritten version feels natural and authentic. Do not introduce outdated or unnatural slang. Keep capitalization, punctuation, and sentence structure as close to the original as possible while improving clarity if needed. If the original message is incoherent, return it as is.") => {
     console.log("Using API Key:", apiKey);
   
     if (!apiKey) {
