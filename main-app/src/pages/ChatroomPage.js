@@ -451,7 +451,7 @@ const ChatroomPage = () => {
                 {isFullRuleDropdownOpen && (
                   <div className="dropdown-content">
                     <div className="full-rule-text">
-                      <h2>Full Rules of Mafia</h2>
+                      <h2>Full Rules of dystopAI</h2>
                       <p><strong>Game Setup:</strong> This is a normal game of Mafia with the following roles:</p>
                       <ul>
                         <li><strong>Villager:</strong> Works with others to identify and eliminate the Mafia.</li>
