@@ -6,7 +6,7 @@ const VOTING_DURATION = 30;
 const NIGHT_DURATION = 40;
 
 //role constants
-const MIN_PLAYERS = 6;
+const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 20;
 const TWO_MAFIA_LIMIT = 10
 const THREE_MAFIA_LIMIT = 15
