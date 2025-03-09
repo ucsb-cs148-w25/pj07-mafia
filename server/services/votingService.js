@@ -166,43 +166,42 @@ function calculateResults(lobbyId, voteId) {
   const session = votingSessions[lobbyId]?.find((s) => s.voteId === voteId);
   if (!session) return null;
 
-  // Log the full votes for debugging
-  console.log(`[VOTING] Calculating results for session ${voteId}. Votes:`, session.votes);
-
+  // Count votes to determine outcome
   const voteCounts = {};
   for (const target of Object.values(session.votes)) {
     voteCounts[target] = (voteCounts[target] || 0) + 1;
   }
 
-  // Log vote counts for debugging
-  console.log(`[VOTING] Vote counts:`, voteCounts);
+  console.log(`[VOTING] Votes received: ${Object.keys(session.votes).length}`);
 
   let maxVotes = 0;
   let candidate = null;
   let tie = false;
+  let candidates = [];
 
-  // Determine which candidate received the highest number of votes
+  // Find the candidate with the most votes
   for (const [target, count] of Object.entries(voteCounts)) {
-    console.log("[VOTING SERVICE]", target, count);
+    // Skip the secret token
     if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
+    
     if (count > maxVotes) {
       maxVotes = count;
       candidate = target;
       tie = false;
+      candidates = [target];
     } else if (count === maxVotes) {
       tie = true;
+      candidates.push(target);
     }
   }
-
-  // If there is a tie or the winner is the secret token, no one is eliminated.
+  
+  // If tie or no valid votes, no one is eliminated
   if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r" || maxVotes === 0) {
-    console.log(
-      `[VOTING] session ${voteId} in lobby ${lobbyId} ended with a tie or abstention. Tie: ${tie}, MaxVotes: ${maxVotes}`
-    );
+    console.log(`[VOTING] No elimination: ${tie ? 'tie' : 'no majority'}`);
     return null;
   }
 
-  console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidate} with ${maxVotes} votes`);
+  console.log(`[VOTING] ${session.voteType} vote outcome: ${candidate} eliminated (${maxVotes} votes)`);
   return candidate;
 }
 
@@ -267,27 +266,21 @@ function endVoting(lobbyId, voteId) {
   return eliminatedPlayer;
 }
 
-// Helper function to check if all night votes have been cast
+// Check if all night roles have cast their votes
 function checkAllNightVotesComplete(lobbyId) {
-  // Get lobby to check which roles exist
   const lobby = lobbyService.getLobby(lobbyId);
-  if (!lobby) {
-    console.log('[VOTING] No lobby found for checking night votes completion');
-    return false;
-  }
+  if (!lobby) return false;
   
-  // Check if votes object exists
+  // Initialize votes object if needed
   if (!nightVotes[lobbyId]) {
-    console.log('[VOTING] No night votes object exists for lobby');
     nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
   }
   
-  // Required votes
+  // Identify which special roles exist among living players
   let mafiaExists = false;
   let doctorExists = false;
   let detectiveExists = false;
   
-  // Check which roles exist in the game
   lobby.players.forEach(player => {
     if (player.isAlive) {
       if (player.role?.toLowerCase() === "mafia") mafiaExists = true;
@@ -296,15 +289,12 @@ function checkAllNightVotesComplete(lobbyId) {
     }
   });
   
-  console.log(`[VOTING] Alive roles in game - Mafia: ${mafiaExists}, Doctor: ${doctorExists}, Detective: ${detectiveExists}`);
-  console.log(`[VOTING] Current votes - Mafia: ${nightVotes[lobbyId].mafia}, Doctor: ${nightVotes[lobbyId].doctor}, Detective: ${nightVotes[lobbyId].detective}`);
-  
-  // Check if all roles have voted or abstained
+  // A role is considered to have voted if either:
+  // 1. The role doesn't exist in the game, or
+  // 2. The role has submitted a vote
   const mafiaVoted = !mafiaExists || nightVotes[lobbyId].mafia !== null;
   const doctorVoted = !doctorExists || nightVotes[lobbyId].doctor !== null;
   const detectiveVoted = !detectiveExists || nightVotes[lobbyId].detective !== null;
-  
-  console.log(`[VOTING] Night votes status - Mafia: ${mafiaVoted}, Doctor: ${doctorVoted}, Detective: ${detectiveVoted}`);
   
   return mafiaVoted && doctorVoted && detectiveVoted;
 }

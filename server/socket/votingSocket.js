@@ -7,51 +7,40 @@ const processedNightResults = {};
 
 // Process night results when all roles have voted
 function processNightResults(io, lobbyId) {
-  // If we've already processed night results for this cycle, don't do it again
-  if (processedNightResults[lobbyId]) {
-    console.log(`[VOTING] Night results already processed for lobby ${lobbyId}`);
-    return;
-  }
-  
-  // Mark as processed to prevent duplicate processing
+  // Prevent duplicate processing
+  if (processedNightResults[lobbyId]) return;
   processedNightResults[lobbyId] = true;
   
-  // Get the night votes
+  // Get night votes and determine outcome
   const nightVotes = VotingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
-  console.log("[VOTING] Processing night results for votes:", nightVotes);
-  
-  // Process doctor save vs mafia kill
   let eliminatedPlayer = null;
+  
+  // Check if doctor saved mafia target
   if (nightVotes.mafia && nightVotes.doctor && nightVotes.mafia === nightVotes.doctor) {
-    console.log(`[VOTING] Doctor saved ${nightVotes.mafia} from elimination`);
-    eliminatedPlayer = null; // Doctor saved the player
+    console.log(`[VOTING] Doctor saved ${nightVotes.mafia}`);
   } else if (nightVotes.mafia) {
     eliminatedPlayer = nightVotes.mafia;
     
-    // Mark player as eliminated in the lobby
+    // Mark player as eliminated
     const lobby = VotingService.getLobby(lobbyId);
     if (lobby) {
       const targetPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
       if (targetPlayer) {
         targetPlayer.isAlive = false;
-        console.log(`[VOTING] Player ${eliminatedPlayer} was eliminated by Mafia`);
       }
     }
   }
   
-  // Broadcast night results to all clients
+  // Broadcast results to clients
   io.to(lobbyId).emit("voting_complete", { 
     eliminated: eliminatedPlayer,
     voteType: "night_results"
   });
   
-  // Send system message about elimination or no elimination
-  let msg;
-  if (eliminatedPlayer) {
-    msg = `A quiet strike in the dark… a player has been replaced by AI.`;
-  } else {
-    msg = `An eerie silence lingers… all players remain as they are… for now.`;
-  }
+  // Send thematic message about the night's events
+  const msg = eliminatedPlayer 
+    ? `A quiet strike in the dark… a player has been replaced by AI.`
+    : `An eerie silence lingers… all players remain as they are… for now.`;
   
   io.to(lobbyId).emit("message", {
     sender: "System",
@@ -59,28 +48,31 @@ function processNightResults(io, lobbyId) {
     timestamp: new Date()
   });
   
-  // Clear all remaining voting sessions
+  // Clean up
   VotingService.clearVotingSessions(lobbyId);
   
-  // After a brief delay, reset the night votes and processed flag for the next night
+  // Reset for next night
   setTimeout(() => {
     VotingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
     delete processedNightResults[lobbyId];
-    console.log(`[VOTING] Reset night votes for lobby ${lobbyId} for next night phase`);
   }, 1000);
 }
 
 function endVotingSession(io, lobbyId, voteId, voteType) {
-  // If this vote was already ended, do nothing.
+  // Prevent duplicate session endings
   if (endedVotes[voteId]) return;
+  endedVotes[voteId] = true;
 
-  endedVotes[voteId] = true; // mark as ended
-
-  // Retrieve the session (if it still exists)
+  // Get the session and verify it exists
   const session = VotingService.getSession(lobbyId, voteId);
-  if (!session) return;
+  if (!session) {
+    console.log(`[VOTING] Session ${voteId} not found when ending`);
+    return;
+  }
 
-  // End the voting session (VotingService.endVoting should remove the session)
+  console.log(`[VOTING] Ending ${voteType} session with ${Object.keys(session.votes).length} votes`);
+  
+  // End the voting session and get the result
   const result = VotingService.endVoting(lobbyId, voteId);
 
   // Special handling for different vote types
@@ -253,7 +245,7 @@ function initVotingSocket(io) {
       }, voteType !== "villager" ? (NIGHT_DURATION * 1000) : (VOTING_DURATION * 1000));
     });
 
-    // Handler for submitting a vote
+    // Process a vote submission
     socket.on("submit_vote", ({ lobbyId, voteId, voter, target, voterRole, voteType: clientVoteType }) => {
       socket.join(lobbyId);
       if (!lobbyId || !voteId || !voter || !target) {
@@ -264,34 +256,54 @@ function initVotingSocket(io) {
       // Store username in socket for detective messages
       if (voter && !socket.username) {
         socket.username = voter;
-        console.log(`[VOTING] Captured username ${voter} from vote submission for socket ${socket.id}`);
       }
 
-      // Debug log the incoming vote data
-      console.log(`[VOTING] Vote submission received:`, { lobbyId, voteId, voter, target, voterRole, clientVoteType });
-
-      // Get the session BEFORE casting vote to get the vote type
-      const sessionBeforeVote = VotingService.getSession(lobbyId, voteId);
-      if (sessionBeforeVote) {
-        console.log(`[VOTING] Found session before vote:`, {
-          voteId: sessionBeforeVote.voteId,
-          voteType: sessionBeforeVote.voteType,
-          voters: Array.from(sessionBeforeVote.voters),
-          votes: sessionBeforeVote.votes
-        });
-      } else {
-        console.log(`[VOTING] No session found for voteId: ${voteId}`);
+      // Special handling for villager votes 
+      if (voteId.startsWith('villager_') || clientVoteType === 'villager') {
+        const allSessions = VotingService.getVotingSessions(lobbyId);
+        const villagerSession = allSessions && allSessions.find(s => s.voteType === 'villager');
+        
+        if (villagerSession) {
+          // Directly record vote in session
+          villagerSession.votes[voter] = target;
+          console.log(`[VOTING] Day vote: ${voter} → ${target}`);
+          
+          // Send acknowledgment
+          socket.emit("vote_acknowledged", { 
+            voteId: voteId,
+            voteType: 'villager'
+          });
+          
+          // Process results if all votes are in
+          const allVoters = villagerSession.voters.size;
+          const votesCast = Object.keys(villagerSession.votes).length;
+          
+          if (votesCast === allVoters) {
+            console.log(`[VOTING] All day votes received (${votesCast}/${allVoters}). Processing.`);
+            endVotingSession(io, lobbyId, villagerSession.voteId, 'villager');
+          }
+          
+          return;
+        } else {
+          console.log(`[VOTING] No villager session found for lobby ${lobbyId}`);
+        }
       }
       
-      // Use client-provided vote type if available, or try to get it from session
+      // Regular processing for non-villager votes
+      let sessionBeforeVote = null;
+      const allSessions = VotingService.getVotingSessions(lobbyId);
+      
+      if (allSessions && allSessions.length > 0) {
+        sessionBeforeVote = VotingService.getSession(lobbyId, voteId);
+      }
+      
+      // Determine vote type from available information
       let voteType = clientVoteType;
       
-      // If no explicit vote type, try to get it from session
       if (!voteType && sessionBeforeVote) {
         voteType = sessionBeforeVote.voteType;
       }
       
-      // If still no vote type, try to infer from the voteId or voterRole
       if (!voteType) {
         if (voteId.startsWith('mafia_')) voteType = 'mafia';
         else if (voteId.startsWith('doctor_')) voteType = 'doctor';
@@ -299,13 +311,12 @@ function initVotingSocket(io) {
         else if (voterRole) voteType = voterRole.toLowerCase();
       }
       
-      // If we still can't determine vote type, log error and return
       if (!voteType) {
         console.warn(`[VOTING] Could not determine vote type for vote: ${voter}, ${voteId}`);
         return;
       }
       
-      console.log(`[VOTING] Processing vote for ${voter}, role: ${voterRole}, vote type: ${voteType}`);
+      console.log(`[VOTING] ${voteType} vote: ${voter} → ${target}`);
       
       // Verify that this is a valid vote for the player's role
       const isValidVote = (
@@ -320,44 +331,33 @@ function initVotingSocket(io) {
         return;
       }
 
-      // Special handling for all night role votes - record them regardless of session
+      // Handle night role votes (mafia, doctor, detective)
       if ((voteType === "mafia" || voteType === "doctor" || voteType === "detective") && target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
-        console.log(`[VOTING] Directly recording ${voteType} vote for ${target}`);
-        
-        // Store the vote in the nightVotes tracking
+        // Record vote in the tracking system
         VotingService.recordNightVote(lobbyId, voteType, target);
         
-        // Special handling for detective - send the investigation result immediately
+        // Special handling for detective - send investigation result
         if (voteType === "detective") {
-          // Get the lobby to find player roles
           const lobby = VotingService.getLobby(lobbyId);
           if (lobby) {
             const investigatedPlayer = lobby.players.find(p => p.username === target);
-            
             if (investigatedPlayer) {
               const isMafia = investigatedPlayer.role.toLowerCase() === "mafia";
-              console.log(`[VOTING] Detective ${voter} investigating ${target}, isMafia: ${isMafia}`);
-              
-              // Send private message to the detective
               const roleReveal = isMafia ? "is a Mafia member" : "is not a Mafia member";
-              const detectiveMsg = {
+              
+              socket.emit("message", {
                 sender: "System",
                 text: `Your investigation reveals that ${target} ${roleReveal}.`,
                 timestamp: new Date(),
                 isPrivate: true
-              };
-              
-              socket.emit("message", detectiveMsg);
+              });
             }
           }
         }
         
-        // Check if all night votes are complete after this vote
-        const allNightVotesComplete = VotingService.checkAllNightVotesComplete(lobbyId);
-        if (allNightVotesComplete) {
-          console.log("[VOTING] All night roles have voted - processing results immediately");
-          
-          // Process night results immediately when all roles vote
+        // Check if all night roles have voted and process results if so
+        if (VotingService.checkAllNightVotesComplete(lobbyId)) {
+          console.log("[VOTING] All night roles voted - processing results");
           processNightResults(io, lobbyId);
         }
       }
@@ -375,8 +375,17 @@ function initVotingSocket(io) {
       }
       
       // Always acknowledge the vote to close the popup
+      // Find the correct voteId to acknowledge
+      let acknowledgeVoteId = voteId;
+      
+      if (voteType === "villager" && voteId.startsWith("villager_")) {
+        // For villager votes with custom IDs, send back the same custom ID
+        // This ensures the frontend can match the acknowledgment to its request
+        console.log(`[VOTING] Acknowledging villager vote with original voteId: ${voteId}`);
+      }
+      
       socket.emit("vote_acknowledged", { 
-        voteId: voteId,
+        voteId: acknowledgeVoteId,
         voteType: voteType
       });
       
@@ -463,31 +472,41 @@ function initVotingSocket(io) {
         if (target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
           console.log(`[VOTING] Day phase vote from ${voter} for ${target}`);
           
-          // Make sure the vote gets recorded
-          VotingService.castVote(lobbyId, voteId, voter, target);
+          // For villager votes, find any active villager voting session
+          const allSessions = VotingService.getVotingSessions(lobbyId);
+          const villagerSession = allSessions && allSessions.find(s => s.voteType === 'villager');
           
-          // Get updated session after vote cast
-          session = VotingService.getSession(lobbyId, voteId);
-          
-          if (session) {
-            // Debugging - dump the current votes
-            console.log(`[VOTING] After recording vote - Session votes:`, session.votes);
-            console.log(`[VOTING] Voters in session:`, Array.from(session.voters));
+          if (villagerSession) {
+            console.log(`[VOTING] Found villager session with ID: ${villagerSession.voteId}`);
+            
+            // Use the actual session voteId, not the client-provided one
+            const actualVoteId = villagerSession.voteId;
+            
+            // DIRECTLY add the vote to the session's votes object to bypass validation
+            // This is a workaround for potential validation issues
+            villagerSession.votes[voter] = target;
+            console.log(`[VOTING] DIRECTLY added vote from ${voter} for ${target} to session ${actualVoteId}`);
+            console.log(`[VOTING] Session votes after direct modification:`, villagerSession.votes);
+            
+            // Get updated session after vote cast
+            session = villagerSession;
+            
+            // Only end the session if all expected votes have been cast
+            const allVoters = session ? session.voters.size : 0;
+            const votesCast = session ? Object.keys(session.votes).length : 0;
+            
+            console.log(`[VOTING] Day phase vote status - ${votesCast} votes cast out of ${allVoters} voters`);
+            
+            // End voting session if all votes are in
+            if (session && votesCast === allVoters) {
+              console.log(`[VOTING] All day phase votes received. Processing results.`);
+              // Force a final check of votes before ending
+              console.log(`[VOTING] Final votes before processing:`, session.votes);
+              endVotingSession(io, lobbyId, actualVoteId, voteType);
+            }
+          } else {
+            console.warn(`[VOTING] No active villager voting session found for lobby ${lobbyId}`);
           }
-        }
-        
-        // Only end the session if all expected votes have been cast
-        const allVoters = session ? session.voters.size : 0;
-        const votesCast = session ? Object.keys(session.votes).length : 0;
-        
-        console.log(`[VOTING] Day phase vote status - ${votesCast} votes cast out of ${allVoters} voters`);
-        
-        // End voting session if all votes are in
-        if (session && votesCast === allVoters) {
-          console.log(`[VOTING] All day phase votes received. Processing results.`);
-          // Force a final check of votes before ending
-          console.log(`[VOTING] Final votes before processing:`, session.votes);
-          endVotingSession(io, lobbyId, voteId, voteType);
         }
       }
       else {
