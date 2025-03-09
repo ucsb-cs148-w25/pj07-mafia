@@ -105,6 +105,97 @@ function startDayNightCycle(lobbyId) {
       clearInterval(lobby.timer);
       lobby.timer = null;
 
+      // If night phase is ending, process any pending night votes
+      if (lobby.phase === "night") {
+        // We need to check if any night votes are pending
+        try {
+          const votingService = require('./votingService');
+          const votingSocket = require('../socket/votingSocket');
+          
+          // Clear any lingering voting sessions first
+          const activeSessions = votingService.getVotingSessions(lobbyId) || [];
+          console.log(`[LOBBY] Clearing ${activeSessions.length} remaining voting sessions at night end`);
+          
+          // Remove all remaining voting sessions
+          votingService.clearVotingSessions(lobbyId);
+          
+          // Skip processing entirely if already processed
+          if (votingSocket.processedNightResults[lobbyId]) {
+            console.log(`[LOBBY] Night results already processed for lobby ${lobbyId}, skipping`);
+          } else {
+            // Process night results if they haven't been processed yet
+            console.log("[LOBBY] Night phase ended, processing results");
+            const nightVotes = votingService.nightVotes[lobbyId] || { mafia: null, doctor: null, detective: null };
+            console.log("[LOBBY] Current night votes:", nightVotes);
+            
+            // Check if any night votes were cast - only process results if votes were cast
+            const anyVotesCast = nightVotes.mafia !== null || nightVotes.doctor !== null || nightVotes.detective !== null;
+            if (anyVotesCast) {
+              console.log(`[LOBBY] Night votes found that weren't processed, processing now`);
+              
+              // IMPORTANT: Process doctor save vs mafia kill
+              let eliminatedPlayer = null;
+              if (nightVotes.mafia && nightVotes.doctor && nightVotes.mafia === nightVotes.doctor) {
+                console.log(`[LOBBY] Doctor saved ${nightVotes.mafia} from elimination`);
+                eliminatedPlayer = null; // Doctor saved the player
+              } else if (nightVotes.mafia) {
+                eliminatedPlayer = nightVotes.mafia;
+                
+                // Mark player as eliminated in the lobby
+                const targetPlayer = lobby.players.find(p => p.username === eliminatedPlayer);
+                if (targetPlayer) {
+                  targetPlayer.isAlive = false;
+                  console.log(`[LOBBY] Player ${eliminatedPlayer} was eliminated by Mafia`);
+                }
+              }
+              
+              // Broadcast night results to all clients
+              io.to(lobbyId).emit("voting_complete", { 
+                eliminated: eliminatedPlayer,
+                voteType: "night_results"
+              });
+              
+              // Send system message about elimination or no elimination
+              let msg;
+              if (eliminatedPlayer) {
+                msg = `A quiet strike in the dark… a player has been replaced by AI.`;
+              } else {
+                msg = `An eerie silence lingers… all players remain as they are… for now.`;
+              }
+              
+              io.to(lobbyId).emit("message", {
+                sender: "System",
+                text: msg,
+                timestamp: new Date()
+              });
+            } else {
+              console.log(`[LOBBY] No night votes found to process at end of night phase`);
+            }
+            
+            // Mark night results as processed
+            votingSocket.processedNightResults[lobbyId] = true;
+          }
+          
+          // Reset night votes for next night phase
+          votingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
+          
+        } catch (error) {
+          console.error("Error processing night votes:", error);
+        }
+      }
+
+      // Reset any previously processed night results flag when changing phases
+      if (lobby.phase === "night") {
+        try {
+          const votingSocket = require('../socket/votingSocket');
+          if (votingSocket.resetProcessedNightResults) {
+            votingSocket.resetProcessedNightResults(lobbyId);
+          }
+        } catch (error) {
+          console.error("Error resetting processed night results:", error);
+        }
+      }
+
       switch (lobby.phase) {
         case "day": lobby.phase = "voting"; break;
         case "voting": lobby.phase = "night"; break;
