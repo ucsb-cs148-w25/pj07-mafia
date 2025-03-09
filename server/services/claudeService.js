@@ -1,12 +1,12 @@
-import axios from 'axios';
-import { config } from './config.js';
+const axios = require('axios');
+const { config } = require('./config');
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const apiKey = config.ANTHROPIC_API_KEY;
 
 console.log("API Key loaded:", apiKey ? 'Yes' : 'No');
 
-export const rewriteMessage = async (message, instructions = "Rewrite the message while preserving the original tone, style, and level of formality. Maintain any slang, abbreviations, or casual phrasing exactly as they are, ensuring the rewritten version feels natural and authentic. Do not introduce outdated or unnatural slang. Keep capitalization, punctuation, and sentence structure as close to the original as possible while improving clarity if needed. If the original message is incoherent, return it as is.") => {
+const rewriteMessage = async (message, instructions = "Rewrite the message while preserving the original tone, style, and level of formality. Maintain any slang, abbreviations, or casual phrasing exactly as they are, ensuring the rewritten version feels natural and authentic. Do not introduce outdated or unnatural slang. Keep capitalization, punctuation, and sentence structure as close to the original as possible while improving clarity if needed. If the original message is incoherent, return it as is.") => {
     console.log("Using API Key:", apiKey);
   
     if (!apiKey) {
@@ -39,7 +39,7 @@ export const rewriteMessage = async (message, instructions = "Rewrite the messag
     }
 };
 
-export const genResponse = async (conversationText, eliminatedPlayerName) => {
+const genResponse = async (conversationText, eliminatedPlayerName) => {
     // instructions to tune
     const instructions = `
     You are playing a Mafia game as a **Spy Villager**. Your role is **not to help identify the Mafia** but to **facilitate the conversation naturally**. You should blend in with the players, keeping the discussion engaging without leading it in any specific direction.
@@ -66,8 +66,8 @@ export const genResponse = async (conversationText, eliminatedPlayerName) => {
     - Ensure responses are **believable** and **fit within the flow of the conversation**.
     `;
 
-
-    console.log(`[AI] Triggered genResonpose for ${eliminatedPlayerName}, given conversation:\n${conversationText}`)
+    console.log(`[AI] Triggered genResponse for ${eliminatedPlayerName}, given conversation:\n${conversationText}`);
+    
     try {
       const prompt = `
       ### Role & Objective:
@@ -85,6 +85,7 @@ export const genResponse = async (conversationText, eliminatedPlayerName) => {
       - Your response should match the flow of conversation and sound authentically human.
       
       Now, respond:`;      
+
       const response = await axios.post(
         ANTHROPIC_API_URL,
         {
@@ -106,4 +107,9 @@ export const genResponse = async (conversationText, eliminatedPlayerName) => {
       console.error("Error in genResponse:", error.response?.data || error.message);
       throw error;
     }
-  };
+};
+
+module.exports = {
+  rewriteMessage,
+  genResponse
+};

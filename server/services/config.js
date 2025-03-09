@@ -1,16 +1,15 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// config.js (CommonJS version)
+const path = require('path');
+const dotenv = require('dotenv');
 
-// For ES modules, we need to simulate __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Explicitly load the .env file
-dotenv.config({ 
-  path: path.resolve(__dirname, '../../.env') 
+// By default in CommonJS, __dirname is available
+dotenv.config({
+  path: path.resolve(__dirname, '../../.env')
 });
 
-export const config = {
+// We export an object called config
+const config = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY
 };
+
+module.exports = { config };

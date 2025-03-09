@@ -9,6 +9,7 @@ Broadcast messages to all users in a chatroom.
 Notify when users join or leave the chat.
 */
 const lobbyService = require('../services/lobbyService');
+const { rewriteMessage } = require('../services/claudeService');
 
 function initChatSocket(io) {
   io.on('connection', (socket) => {
@@ -66,31 +67,117 @@ function initChatSocket(io) {
       }
     });
 
-    // 3. sendMessage => skip if not alive
-    socket.on('sendMessage', ({ lobbyId, text , senderName}) => {
+    // 3. Normal living player message
+    socket.on("sendMessage", async ({ lobbyId, text, senderName }) => {
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
-        return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
+        return socket.emit("lobbyError", { message: "Lobby not found." });
+      }
+
+      // If the client passes 'senderName', we can rely on it. 
+      // Or we can figure it out from the socket. You choose:
+      let player = lobby.players.find((p) => p.socketId === socket.id);
+      if (!player) {
+        return socket.emit("lobbyError", { message: "Player not in this lobby." });
+      }
+
+      // If the player is dead, do not let them post in main chat
+      if (!player.isAlive) {
+        console.log(`[CHAT] Dead player ${player.username} tried main chat. Ignored.`);
+        return;
+      }
+
+      // Possibly rewrite if not mafia
+      let finalText = text;
+      const isMafia = (player.role || "").toLowerCase() === "mafia";
+      if (!isMafia) {
+        try {
+          finalText = await rewriteMessage(text);
+        } catch (err) {
+          console.error("[CHAT] rewrite failed. fallback to original:", err);
+        }
+      }
+
+      const msgObj = {
+        text: finalText,
+        sender: senderName || player.username,
+        timestamp: new Date(),
+        isGhost: false,
+      };
+
+      // Distribute based on day/night
+      const { phase } = lobby;
+      if (phase === "day" || phase === "voting") {
+        // all alive
+        lobby.players.forEach((pl) => {
+          if (pl.isAlive) {
+            io.to(pl.socketId).emit("message", msgObj);
+          }
+        });
+      } else if (phase === "night") {
+        // mafia only sees mafia, non-mafia sees self
+        if (isMafia) {
+          lobby.players.forEach((pl) => {
+            if (pl.isAlive && (pl.role || "").toLowerCase() === "mafia") {
+              io.to(pl.socketId).emit("message", msgObj);
+            }
+          });
+        } else {
+          // only the sender sees their own text
+          io.to(player.socketId).emit("message", msgObj);
+        }
+      }
+    });
+
+    // 4. Ghost message from a dead player
+    socket.on("sendGhostMessage", ({ lobbyId, text }) => {
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (!lobby) {
+        return socket.emit("lobbyError", { message: "Lobby not found." });
       }
 
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
-        return socket.emit('lobbyError', { message: 'You are not in this lobby.' });
+        return socket.emit("lobbyError", { message: "Player not in this lobby." });
       }
 
-      if (!player.isAlive) {
-        console.log(`[DEBUG] ${player.username} tried to chat but is eliminated.`);
-        return; 
+      if (player.isAlive) {
+        console.log(`[GHOST] Alive player ${player.username} tried ghost chat. Denied.`);
+        return;
       }
 
+      // broadcast only to dead
       const msgObj = {
         text,
-        sender: senderName,
+        sender: `Ghost_${player.username}`,
         timestamp: new Date(),
+        isGhost: true,
       };
+      lobby.players.forEach((pl) => {
+        if (!pl.isAlive) {
+          io.to(pl.socketId).emit("message", msgObj);
+        }
+      });
+      console.log(`[GHOST CHAT] ${player.username} => all dead: ${text}`);
+    });
 
-      io.to(lobbyId).emit('message', msgObj);
-      console.log(`Message from ${senderName} in lobby ${lobbyId}: ${text}`);
+    // 5. AI message continuing the player's "alive" persona
+    socket.on("sendAiMessage", ({ lobbyId, text, eliminatedPlayerName }) => {
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (!lobby) {
+        return socket.emit("lobbyError", { message: "Lobby not found." });
+      }
+
+      // Force broadcast as if this user were alive
+      const msgObj = {
+        text,
+        sender: eliminatedPlayerName,
+        timestamp: new Date(),
+        isGhost: false,
+        isAi: true,
+      };
+      io.to(lobbyId).emit("message", msgObj);
+      console.log(`[AI MESSAGE] from ${eliminatedPlayerName}: ${text}`);
     });
 
     // 4. leaveChatroom

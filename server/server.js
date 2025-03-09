@@ -10,22 +10,22 @@ Initialize socket.io for real-time communication.
 Attach controllers and sockets to handle application logic.
 */
 
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors'; // Import CORS middleware
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors'); // Import CORS middleware
 
 // Socket initializers
-import { initLobbySocket } from './socket/lobbySocket.js';
-import { initChatSocket } from './socket/chatSocket.js';
-import { initVotingSocket } from './socket/votingSocket.js';
+const { initLobbySocket } = require('./socket/lobbySocket');
+const { initChatSocket } = require('./socket/chatSocket');
+const { initVotingSocket } = require('./socket/votingSocket');
 
 // (Optional) Express-based Controllers
-import lobbyController from './controllers/lobbyController.js';
-import chatController from './controllers/chatController.js';
+const lobbyController = require('./controllers/lobbyController');
+const chatController = require('./controllers/chatController');
 
 // Import the new route for rewriting messages
-import claudeServiceRoute from './routes/claudeServiceRoute.js'; // Import the route
+const claudeServiceRoute = require('./routes/claudeServiceRoute'); // Import the route
 
 // Initialize Express App
 const app = express();

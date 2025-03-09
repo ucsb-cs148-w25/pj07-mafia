@@ -1,5 +1,5 @@
-import express from 'express';
-import { rewriteMessage, genResponse } from '../services/claudeService.js'; // Import the rewriteMessage function
+const express = require('express');
+const { rewriteMessage, genResponse } = require('../services/claudeService'); // Use require instead of import
 
 const router = express.Router();
 
@@ -36,4 +36,4 @@ router.post('/genResponse', async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router; // Use CommonJS module.exports instead of ES module export default
