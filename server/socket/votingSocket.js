@@ -49,48 +49,48 @@ function initVotingSocket(io) {
       socket.join(lobbyId);
       console.log(`[VOTING] Vote started for ${voteType} in lobby ${lobbyId}`);
 
-      // if a voting session already exists for a lobby, do not start a new one
+      let session;
+      let voteId;
       const activeSessions = VotingService.getVotingSessions(lobbyId);
       if (activeSessions && activeSessions.length > 0) {
-        console.log(`[VOTING] Active voting session already exists for lobby ${lobbyId}. Ignoring duplicate start_vote event.`);
-        return;
-      }
-
-      // Start a new voting session
-      const voteId = VotingService.startVoting(lobbyId, voteType);
-      if (!voteId) {
-        console.warn(`[VOTING] Failed to start voting for lobby ${lobbyId}`);
-        return;
-      }
-
-      // Retrieve the newly created session
-      const session = VotingService.getSession(lobbyId, voteId);
-      if (!session) {
-        console.warn(
-          `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
+        // If a voting session is already active, reuse it.
+        session = activeSessions[0];
+        voteId = session.voteId || activeSessions[0].id; // adjust based on your implementation
+        console.log(
+          `[VOTING] Active voting session exists for lobby ${lobbyId}. Sending existing vote info.`
         );
-        return;
+      } else {
+        // Start a new voting session
+        voteId = VotingService.startVoting(lobbyId, voteType);
+        if (!voteId) {
+          console.warn(`[VOTING] Failed to start voting for lobby ${lobbyId}`);
+          return;
+        }
+        session = VotingService.getSession(lobbyId, voteId);
+        if (!session) {
+          console.warn(
+            `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
+          );
+          return;
+        }
+        endedVotes[voteId] = false;
+        // Set a timer to auto-end the voting session after VOTING_DURATION seconds
+        setTimeout(() => {
+          const currentSession = VotingService.getSession(lobbyId, voteId);
+          if (currentSession) {
+            console.log("[TIMEOUT] Time limit reached. Ending voting session.");
+            endVotingSession(io, lobbyId, voteId, voteType);
+          }
+        }, VOTING_DURATION * 1000);
       }
-
-      // Reset the ended flag for this vote
-      endedVotes[voteId] = false;
-
-      // Notify clients to open the voting interface
-      io.to(lobbyId).emit("open_voting", {
+      // Send the voting interface event only to the requesting client
+      socket.emit("open_voting", {
         voteType,
         voteId,
         players: Array.from(session.players)
       });
-
-      // Set a timer to auto-end the voting session after VOTING_DURATION seconds
-      setTimeout(() => {
-        const currentSession = VotingService.getSession(lobbyId, voteId);
-        if (currentSession) {
-          console.log("[TIMEOUT] Time limit reached. Ending voting session.");
-          endVotingSession(io, lobbyId, voteId, voteType);
-        }
-      }, VOTING_DURATION * 1000);
     });
+
 
     // Handler for submitting a vote
     socket.on("submit_vote", ({ lobbyId, voteId, voter, target }) => {

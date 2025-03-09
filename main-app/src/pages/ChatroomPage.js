@@ -15,6 +15,7 @@ const ChatroomPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isFullRuleDropdownOpen, setIsFullRuleDropdownOpen] = useState(false);
+  const [is404RuleDropdownOpen, setIs404RuleDropdownOpen] = useState(false);
 
   // Basic user info
   const [username, setUsername] = useState("");
@@ -24,7 +25,7 @@ const ChatroomPage = () => {
   // Phase/time states
   const [currentPhase, setCurrentPhase] = useState("day");
   const [timeLeft, setTimeLeft] = useState(0);
-  const [votingInitiated, setVotingInitiated] = useState(false);
+  const [showVoteButton, setShowVoteButton] = useState(false);
 
   // Voting states
   const currentUsernameRef = useRef(sessionStorage.getItem("username"));
@@ -77,7 +78,7 @@ const ChatroomPage = () => {
       debugLog("message", m);
       setMessages((prev) => [...prev, m]);
       if (currentPhase === "day"){ //only updates log during the day (for future mafia discussion integration)
-        if (m.sender !== "System"){
+        if (m.sender !== "System" && !m.sender.startsWith("Ghost_")){
           setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
         }
       }
@@ -123,21 +124,31 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 7. automated voting popup
+  // 7. Automatically trigger voting session when in voting phase (or for Mafia during night)
   useEffect(() => {
-    if (isEliminated) {
-      console.log(`[CHATROOM] this user is eliminated`)
-      return;
-    }
-    // Check if the current phase qualifies for auto vote initiation
-    if ((currentPhase === "night" || currentPhase === "voting")) {
-        console.log("[DEBUG] inside the phase validator", {votingInitiated})
-        const voteTypeToEmit =
-            currentPhase === "voting" ? "villager" : "mafia";
-        console.log("[DEBUG] Auto initiating voting", { voteType: voteTypeToEmit, lobbyId, role});
+    // Only non-eliminated players should trigger the event
+    if (!isEliminated && lobbyId && role) {
+      if (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia")) {
+        const voteTypeToEmit = currentPhase === "voting" ? "villager" : "mafia";
         socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+      }
     }
-  }, [currentPhase, role, lobbyId, isEliminated, votingInitiated]);
+  }, [currentPhase, role, isEliminated, lobbyId]);
+
+  // 8. Manual voting popup trigger button: now just opens the voting popup.
+  useEffect(() => {
+    // Show the vote button for eligible players (if not eliminated) so they can choose when to vote
+    if (!isEliminated && (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia"))) {
+      setShowVoteButton(true);
+    } else {
+      setShowVoteButton(false);
+    }
+  }, [currentPhase, isEliminated]);
+
+  const handleVoteButtonClick = () => {
+    setIsVoting(true);
+  };
+
 
   // 8. open_voting / voting_complete
   useEffect(() => {
@@ -156,13 +167,13 @@ const ChatroomPage = () => {
       if (incType === "mafia") {
         // only mafia sees the popup
         if (role && role.toLowerCase() === "mafia") {
-          setIsVoting(true);
+          // setIsVoting(true);
         } else {
           setIsVoteLocked(true);
         }
       } else {
         // villager => everyone can vote
-        setIsVoting(true);
+        // setIsVoting(true);
       }
     };
 
@@ -282,12 +293,12 @@ const ChatroomPage = () => {
   return (
     <div
       className={`chatroom-container ${
-        currentPhase === "night" ? "night-mode" : ""
+        currentPhase === "night" || isEliminated ? "night-mode" : ""
       } ${isEliminated ? "eliminated" : ""}`}
     >
       {/* 1) Full-width chatroom header */}
       <div className="chatroom-header">
-        <h2>{currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
+        <h2>{isEliminated? "404 ZONE" : currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
 
         {/* Hamburger button to toggle sidebar */}
         <button className="hamburger-button" onClick={toggleSidebar}>
@@ -387,7 +398,7 @@ const ChatroomPage = () => {
               {isFullRuleDropdownOpen && (
                 <div className="dropdown-content">
                   <div className="full-rule-text">
-                    <h2>Full Rules of Mafia</h2>
+                    <h2>Full Rules of dystopAI</h2>
                     <p><strong>Game Setup:</strong> This is a normal game of Mafia with the following roles:</p>
                     <ul>
                       <li><strong>Villager:</strong> Works with others to identify and eliminate the Mafia.</li>
@@ -411,6 +422,40 @@ const ChatroomPage = () => {
                 </div>
               )}
             </div>
+            {isEliminated && (
+              <div className="dropdown-entry">
+                <div
+                  className="dropdown-header"
+                  onClick={() => setIs404RuleDropdownOpen((prev) => !prev)}
+                >
+                  <div className="dropdown-title">404 Zone Rule</div>
+                  <div className="dropdown-icon">
+                    {is404RuleDropdownOpen ? "▼" : "►"}
+                  </div>
+                </div>
+                {is404RuleDropdownOpen && (
+                  <div className="dropdown-content">
+                    <div className="full-rule-text">
+                      <h3>404 ZONE: THE ECHO CHAMBER</h3>
+                      <p>
+                        Your presence in the mortal game is no more. The AI now speaks in your place, weaving words that 
+                        are no longer your own.
+                      </p>
+                      <p>
+                        Here in the <strong>404 Zone</strong>, only those who have suffered the same fate may hear you.  
+                        You may <strong>whisper to the lost</strong>, but your voice will never reach the living.  
+                        You remain a <strong>spectator</strong>, watching the game unfold, powerless to intervene.  
+                      </p>
+                      <p>
+                        The game moves forward without you—but does it truly?  
+                        Or have you simply become part of the machine?
+                      </p>
+                      <p><em>There is no escape. There is only the echo.</em></p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {/* Return to Home button */}
           <button
@@ -468,25 +513,35 @@ const ChatroomPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input - always shown. Optionally disable if you want for eliminated players. */}
-          <div className={`chatroom-input-container`}>
-            <textarea
-              className="chatroom-input"
-              rows="4"
-              placeholder="Type your message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <button className="chatroom-send-button" onClick={handleSendMessage}>
-              Send
+          {showVoteButton && !isVoting && !isEliminated && (
+            <button className="floating-vote-button" onClick={handleVoteButtonClick}>
+              {currentPhase === "voting" ? "Vote" : "Kill"}
             </button>
-          </div>
+          )}
+
+          {!isVoting && (currentPhase !== "night" || role === "Mafia" || isEliminated) && (
+            // 1. All players can talk during the day if not in the middle of voting
+            // 2. Mafia can always talk when not voting
+            // 3. Eliminated players can always talk (they should never vote)
+            <div className="chatroom-input-container">
+              <textarea
+                className="chatroom-input"
+                rows="4"
+                placeholder="Type your message..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+              <button className="chatroom-send-button" onClick={handleSendMessage}>
+                Send
+              </button>
+            </div>
+          )}
 
           {/* Voting popup */}
           {isVoting && !isEliminated && (
@@ -500,6 +555,7 @@ const ChatroomPage = () => {
                   target: targetPlayer,
                 });
                 setIsVoting(false);
+                setShowVoteButton(false);
               }}
               onClose={() => {
                 socket.emit("submit_vote", {
@@ -509,6 +565,7 @@ const ChatroomPage = () => {
                   target: "s3cr3t_1nv1s1bl3_pl@y3r",
                 });
                 setIsVoting(false);
+                setShowVoteButton(false);
               }}
               role={voteType === "mafia" ? "Mafia" : "Villager"}
               username={username}
