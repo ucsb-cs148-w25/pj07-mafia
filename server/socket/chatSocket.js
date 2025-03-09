@@ -67,7 +67,7 @@ function initChatSocket(io) {
     });
 
     // 3. sendMessage => skip if not alive
-    socket.on('sendMessage', ({ lobbyId, text }) => {
+    socket.on('sendMessage', ({ lobbyId, text , senderName}) => {
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
         return socket.emit('lobbyError', { message: 'Lobby does not exist.' });
@@ -85,12 +85,12 @@ function initChatSocket(io) {
 
       const msgObj = {
         text,
-        sender: player.username,
+        sender: senderName,
         timestamp: new Date(),
       };
 
       io.to(lobbyId).emit('message', msgObj);
-      console.log(`Message from ${player.username} in lobby ${lobbyId}: ${text}`);
+      console.log(`Message from ${senderName} in lobby ${lobbyId}: ${text}`);
     });
 
     // 4. leaveChatroom
