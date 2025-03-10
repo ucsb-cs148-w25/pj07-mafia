@@ -507,7 +507,7 @@ function initVotingSocket(io) {
         console.log(`[VOTING] Processing unknown vote type: ${voteType}`);
         endVotingSession(io, lobbyId, voteId, voteType);
       }
-    } // <-- Added missing closing brace here for the if statement that started on line 371
+    }
       
     // We'll only check for night votes completion if we haven't already processed
     // the results through processNightResults function
