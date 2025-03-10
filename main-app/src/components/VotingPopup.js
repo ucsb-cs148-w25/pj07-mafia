@@ -79,28 +79,9 @@ const VotingPopup = ({
             console.log(`[VOTING] Submitting vote as ${role} for ${selectedPlayer}`);
             setVoteSubmitted(true);
             
-            // Direct vote submission to ensure it goes through
-            try {
-              const voteData = {
-                lobbyId: lobbyId,
-                voteId: `${role.toLowerCase()}_${Date.now()}`, // Unique ID
-                voter: username,
-                target: selectedPlayer,
-                voterRole: role,
-                voteType: role.toLowerCase()
-              };
-              
-              console.log('[VOTING] Sending vote data:', voteData);
-              socket.emit("submit_vote", voteData);
-              
-              // Also delegate to parent component for state management
-              if (typeof onVote === "function") {
-                onVote(selectedPlayer);
-              }
-            } catch (error) {
-              console.error('[VOTING] Error submitting vote:', error);
-              alert('Error submitting vote. Please try again.');
-              setVoteSubmitted(false);
+            // Let the parent component handle voting
+            if (typeof onVote === "function") {
+              onVote(selectedPlayer);
             }
           }
         }}
@@ -113,26 +94,9 @@ const VotingPopup = ({
         onClick={() => {
           console.log('[VOTING] Canceling vote');
           
-          // Direct cancel submission
-          try {
-            const voteData = {
-              lobbyId: lobbyId,
-              voteId: `${role.toLowerCase()}_${Date.now()}`,
-              voter: username,
-              target: "s3cr3t_1nv1s1bl3_pl@y3r",
-              voterRole: role,
-              voteType: role.toLowerCase()
-            };
-            
-            console.log('[VOTING] Sending cancel vote:', voteData);
-            socket.emit("submit_vote", voteData);
-            
-            // Call original onClose
-            if (typeof onClose === "function") {
-              onClose();
-            }
-          } catch (error) {
-            console.error('[VOTING] Error canceling vote:', error);
+          // Let the parent component handle close
+          if (typeof onClose === "function") {
+            onClose();
           }
         }} 
         disabled={voteSubmitted}>

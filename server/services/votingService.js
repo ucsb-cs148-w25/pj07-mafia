@@ -122,8 +122,15 @@ function castVote(lobbyId, voteId, voter, target) {
 
   // Duplicate vote check
   if (session.votes.hasOwnProperty(voter)) {
-    console.warn(`[VOTING] Duplicate vote from ${voter} in session ${voteId} (Lobby ${lobbyId}).`);
-    return;
+    if (session.voteType === "villager") {
+      // For villager voting (day phase), allow players to change their vote
+      console.log(`[VOTING] Allowing vote change for ${voter}: ${session.votes[voter]} → ${target}`);
+      // Continue processing to overwrite the previous vote
+    } else {
+      // For night roles, disallow vote changes
+      console.warn(`[VOTING] Duplicate vote from ${voter} in session ${voteId} (Lobby ${lobbyId}).`);
+      return;
+    }
   }
 
   // Log the session state before validating
@@ -159,48 +166,40 @@ function castVote(lobbyId, voteId, voter, target) {
 
   // Record the vote
   session.votes[voter] = target;
-  console.log(`[VOTING] ${voter} voted for ${target} in session ${voteId} (Lobby ${lobbyId}).`);
-  
-  // Log the session after vote
-  console.log(`[VOTING SERVICE] Session after voting: votes:`, session.votes);
+  console.log(`[VOTING] ${voter} voted for ${target}`);
 }
 
 function calculateResults(lobbyId, voteId) {
   const session = votingSessions[lobbyId]?.find((s) => s.voteId === voteId);
   if (!session) return null;
 
-  // Count votes to determine outcome
+  console.log(`[VOTING] Processing ${Object.keys(session.votes).length} votes for ${session.voteType}`);
+
+  // Count valid votes
   const voteCounts = {};
   for (const target of Object.values(session.votes)) {
+    if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
     voteCounts[target] = (voteCounts[target] || 0) + 1;
   }
-
-  console.log(`[VOTING] Votes received: ${Object.keys(session.votes).length}`);
 
   let maxVotes = 0;
   let candidate = null;
   let tie = false;
-  let candidates = [];
 
-  // Find the candidate with the most votes
+  // Find the player with the most votes
   for (const [target, count] of Object.entries(voteCounts)) {
-    // Skip the secret token
-    if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
-    
     if (count > maxVotes) {
       maxVotes = count;
       candidate = target;
       tie = false;
-      candidates = [target];
     } else if (count === maxVotes) {
       tie = true;
-      candidates.push(target);
     }
   }
-  
-  // If tie or no valid votes, no one is eliminated
-  if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r" || maxVotes === 0) {
-    console.log(`[VOTING] No elimination: ${tie ? 'tie' : 'no majority'}`);
+
+  // If there's a tie or no votes cast, return null (no elimination)
+  if (tie || maxVotes === 0) {
+    console.log(`[VOTING] No elimination: ${tie ? 'tie' : 'no votes'}`);
     return null;
   }
 

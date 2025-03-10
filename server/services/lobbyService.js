@@ -105,13 +105,69 @@ function startDayNightCycle(lobbyId) {
       clearInterval(lobby.timer);
       lobby.timer = null;
 
-      // If night phase is ending, process any pending night votes
-      if (lobby.phase === "night") {
-        // We need to check if any night votes are pending
-        try {
-          const votingService = require('./votingService');
-          const votingSocket = require('../socket/votingSocket');
+      // Process any pending votes when a phase ends
+      try {
+        const votingService = require('./votingService');
+        const votingSocket = require('../socket/votingSocket');
+        
+        // When voting phase is ending (transitioning to night)
+        if (lobby.phase === "voting") {
+          console.log(`[LOBBY] Voting phase ended, processing day vote results`);
           
+          // Get all active voting sessions
+          const activeSessions = votingService.getVotingSessions(lobbyId) || [];
+          const villagerSession = activeSessions.find(s => s.voteType === "villager");
+          
+          // If there's an active villager voting session, process it immediately
+          if (villagerSession) {
+            console.log(`[LOBBY] Found active villager session at voting phase end`);
+            
+            // Get results
+            const result = votingService.endVoting(lobbyId, villagerSession.voteId);
+            
+            // Clear any remaining sessions
+            votingService.clearVotingSessions(lobbyId);
+            
+            // Apply voting result
+            if (result) {
+              // Mark player as eliminated
+              const targetPlayer = lobby.players.find(p => p.username === result);
+              if (targetPlayer) {
+                targetPlayer.isAlive = false;
+                
+                // Notify clients about elimination
+                io.to(lobbyId).emit("voting_complete", { 
+                  eliminated: result,
+                  voteType: "villager"
+                });
+                
+                // Send system message
+                io.to(lobbyId).emit("message", {
+                  sender: "System",
+                  text: `The majority has spoken… ${result} has been replaced by AI.`,
+                  timestamp: new Date()
+                });
+              }
+            } else {
+              // No elimination (tie or no votes)
+              io.to(lobbyId).emit("voting_complete", { 
+                eliminated: null,
+                voteType: "villager"
+              });
+              
+              io.to(lobbyId).emit("message", {
+                sender: "System",
+                text: `The vote is tied. All players remain as they are… for now.`,
+                timestamp: new Date()
+              });
+            }
+          } else {
+            console.log(`[LOBBY] No active villager session found at voting phase end`);
+          }
+        }
+        
+        // If night phase is ending, process any pending night votes
+        else if (lobby.phase === "night") {
           // Clear any lingering voting sessions first
           const activeSessions = votingService.getVotingSessions(lobbyId) || [];
           console.log(`[LOBBY] Clearing ${activeSessions.length} remaining voting sessions at night end`);
@@ -178,10 +234,9 @@ function startDayNightCycle(lobbyId) {
           
           // Reset night votes for next night phase
           votingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
-          
-        } catch (error) {
-          console.error("Error processing night votes:", error);
         }
+      } catch (error) {
+        console.error("Error processing votes at phase transition:", error);
       }
 
       // Reset any previously processed night results flag when changing phases
@@ -196,11 +251,14 @@ function startDayNightCycle(lobbyId) {
         }
       }
 
-      switch (lobby.phase) {
+      // Change phase after processing votes
+      const currentPhase = lobby.phase;
+      switch (currentPhase) {
         case "day": lobby.phase = "voting"; break;
         case "voting": lobby.phase = "night"; break;
         case "night": lobby.phase = "day"; break;
       }
+      
       startDayNightCycle(lobbyId);
     }
   }, 1000);

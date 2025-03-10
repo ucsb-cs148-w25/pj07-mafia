@@ -79,23 +79,7 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   if (result && typeof result === 'object' && result.type) {
     // Handle detective investigation result
     if (result.type === 'detective') {
-      console.log("[VOTING] Processing detective investigation result");
-      
-      // Send the detective result to all sockets, but make it a private message
-      // This ensures the detective will see it without having to match exact socket
-      console.log(`[VOTING] Preparing to send investigation result to detective ${result.detective}`);
-      const roleReveal = result.isMafia ? "is a Mafia member" : "is not a Mafia member";
-      const detectiveMsg = {
-        sender: "System",
-        text: `Your investigation reveals that ${result.target} ${roleReveal}.`,
-        timestamp: new Date(),
-        isPrivate: true,
-        forUsername: result.detective  // Add target username 
-      };
-      
-      // Send to everyone in the lobby, and let clients filter
-      io.to(lobbyId).emit("detective_result", detectiveMsg);
-      
+      // Skip sending duplicate message
       return;
     }
     
@@ -162,6 +146,11 @@ function initVotingSocket(io) {
       }
     });
     
+    // Simple ping handler for debugging
+    socket.on("ping_voting", ({ lobbyId }) => {
+      console.log(`[VOTING] Ping received from ${socket.id} in lobby ${lobbyId}`);
+      socket.emit("pong_voting");
+    });
 
     // Handler for starting a vote
     socket.on("start_vote", ({ lobbyId, voteType }) => {
@@ -187,7 +176,14 @@ function initVotingSocket(io) {
               VotingService.removeVotingSession(lobbyId, sessionIndex);
             }
           } else {
-            console.log(`[VOTING] Active ${voteType} voting session already exists for lobby ${lobbyId}. Ignoring duplicate start_vote event.`);
+            // Reuse existing day voting session
+            console.log(`[VOTING] Reusing existing ${voteType} voting session`);
+            socket.emit("open_voting", {
+              voteType: existingSessionOfSameType.voteType,
+              voteId: existingSessionOfSameType.voteId,
+              players: Array.from(existingSessionOfSameType.players)
+            });
+            
             return;
           }
         }
@@ -228,12 +224,21 @@ function initVotingSocket(io) {
       // Mark this vote as not ended yet
       endedVotes[voteId] = false;
       
-      // Send the voting interface event to the requesting client
-      socket.emit("open_voting", {
-        voteType,
-        voteId,
-        players: Array.from(session.players)
-      });
+      // Handle different vote types
+      if (voteType === "villager") {
+        socket.emit("open_voting", {
+          voteType,
+          voteId,
+          players: Array.from(session.players)
+        });
+      } else {
+        // For night roles, broadcast to all players
+        io.to(lobbyId).emit("open_voting", {
+          voteType,
+          voteId,
+          players: Array.from(session.players)
+        });
+      }
 
       // Set a timer to auto-end the voting session
       setTimeout(() => {
@@ -336,20 +341,19 @@ function initVotingSocket(io) {
         // Record vote in the tracking system
         VotingService.recordNightVote(lobbyId, voteType, target);
         
-        // Special handling for detective - send investigation result
+        // Send detective investigation results
         if (voteType === "detective") {
           const lobby = VotingService.getLobby(lobbyId);
           if (lobby) {
             const investigatedPlayer = lobby.players.find(p => p.username === target);
             if (investigatedPlayer) {
               const isMafia = investigatedPlayer.role.toLowerCase() === "mafia";
-              const roleReveal = isMafia ? "is a Mafia member" : "is not a Mafia member";
-              
-              socket.emit("message", {
+              io.to(lobbyId).emit("detective_result", {
                 sender: "System",
-                text: `Your investigation reveals that ${target} ${roleReveal}.`,
+                text: `Your investigation reveals that ${target} ${isMafia ? "is a Mafia member" : "is not a Mafia member"}.`,
                 timestamp: new Date(),
-                isPrivate: true
+                isPrivate: true,
+                forUsername: voter
               });
             }
           }
@@ -409,19 +413,8 @@ function initVotingSocket(io) {
             const investigatedPlayer = lobby.players.find(p => p.username === target);
             
             if (investigatedPlayer) {
-              const isMafia = investigatedPlayer.role.toLowerCase() === "mafia";
-              console.log(`[VOTING] Detective ${voter} investigating ${target}, isMafia: ${isMafia}`);
-              
-              // Send private message to the detective
-              const roleReveal = isMafia ? "is a Mafia member" : "is not a Mafia member";
-              const detectiveMsg = {
-                sender: "System",
-                text: `Your investigation reveals that ${target} ${roleReveal}.`,
-                timestamp: new Date(),
-                isPrivate: true
-              };
-              
-              socket.emit("message", detectiveMsg);
+              // Skip duplicate detective result message
+              console.log(`[VOTING] Detective ${voter} investigating ${target}`)
             } else {
               console.log(`[VOTING] Investigation target ${target} not found`);
             }

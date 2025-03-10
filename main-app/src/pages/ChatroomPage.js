@@ -177,19 +177,15 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 7. Automatically trigger voting session when in voting phase (or for Mafia during night)
+  // 7. Automatically trigger voting session for night roles only
   useEffect(() => {
     if (isEliminated) {
       console.log(`[CHATROOM] this user is eliminated`)
       return;
     }
     
-    // Check if the current phase qualifies for auto vote initiation
-    if (currentPhase === "voting") {
-      console.log("[DEBUG] Auto initiating day voting", { lobbyId });
-      socket.emit("start_vote", { voteType: "villager", lobbyId });
-    } 
-    else if (currentPhase === "night") {
+    // Only auto-trigger votes for night phase special roles
+    if (currentPhase === "night") {
       // Night phase - initiating role-specific votes
       if (role) {
         const lowerRole = role.toLowerCase();
@@ -221,15 +217,29 @@ const ChatroomPage = () => {
   }, [currentPhase, isEliminated]);
 
   const handleVoteButtonClick = () => {
-    setIsVoting(true);
+    // For day voting (voting phase), we need to start the vote first
+    if (currentPhase === "voting") {
+      console.log("[DEBUG] Manual initiation of day voting", { lobbyId });
+      socket.emit("start_vote", { voteType: "villager", lobbyId });
+      // The popup will open when the server responds with open_voting
+    } else {
+      // For night voting, the vote should already be started, just show the popup
+      setIsVoting(true);
+    }
   };
 
 
   // 8. open_voting / voting_complete
+
   useEffect(() => {
     const handleOpenVoting = ({ voteType: incType, voteId: incId, players: incPlayers }) => {
       debugLog("open_voting", { incType, incId, incPlayers });
       console.log("[DEBUG] Received vote type:", incType, "Current user role:", role);
+      
+      if (!incPlayers || incPlayers.length === 0) {
+        console.warn("[DEBUG] Received empty players list in open_voting event");
+        return;
+      }
       
       // Remove yourself from the target list if you don't want self votes
       const filtered = incPlayers.filter(
@@ -267,11 +277,12 @@ const ChatroomPage = () => {
         console.log("[DEBUG] Showing villager vote popup");
       }
       
-      // Only show voting popup if this user is eligible
-      if (shouldShowVoting) {
+      // Only show voting popup if this user is eligible and not eliminated
+      if (shouldShowVoting && !isEliminated) {
         setIsVoting(true);
+        setShowVoteButton(false);
       } else {
-        setIsVoteLocked(false); // Don't lock chat for ineligible roles
+        setIsVoteLocked(false);
       }
     };
 
@@ -281,6 +292,11 @@ const ChatroomPage = () => {
       // Global voting completion - affects all players
       setIsVoting(false); // Close any open voting popups
       setIsVoteLocked(false); // Unlock chat input
+      
+      // Restore vote button for day voting
+      if (completedVoteType === "villager" && currentPhase === "voting" && !isEliminated) {
+        setShowVoteButton(true);
+      }
       
       // Handle elimination if there was one
       if (eliminated) {
@@ -695,17 +711,13 @@ const ChatroomPage = () => {
                   voteId,
                   voter: username,
                   target: targetPlayer,
+                  voterRole: role,
+                  voteType: voteType
                 });
                 setIsVoting(false);
                 setShowVoteButton(false);
               }}
               onClose={() => {
-                socket.emit("submit_vote", {
-                  lobbyId,
-                  voteId,
-                  voter: username,
-                  target: "s3cr3t_1nv1s1bl3_pl@y3r",
-                });
                 setIsVoting(false);
                 setShowVoteButton(false);
               }}
@@ -721,25 +733,7 @@ const ChatroomPage = () => {
             </div>
           )}
         </div>
-      {isVoting && !isEliminated && (
-        <VotingPopup
-          players={players}
-          onVote={(targetPlayer) => {
-            debugLog(`Vote submitted in ChatroomPage for ${targetPlayer}, role=${role}, voteType=${voteType}`);
-            // The VotingPopup component now handles socket emission directly
-            // No need to emit here, just for logging
-          }}
-          onClose={() => {
-            // Treat cancellation as a vote with a default target value (e.g., "abstain")
-            debugLog(`Vote cancelled in ChatroomPage by ${username}`);
-            // The VotingPopup component now handles socket emission directly
-            // No need to emit here, just for logging
-          }}
-          role={voteType.charAt(0).toUpperCase() + voteType.slice(1)}
-          username={username}
-          lobbyId={lobbyId}
-        />
-      )}
+      {/* VotingPopup is now handled inside the chat-content div */}
       {/* Debug voteType */}
       <div style={{ display: 'none' }}>Current voteType: {voteType}</div>
       {showEliminationMessage && (
