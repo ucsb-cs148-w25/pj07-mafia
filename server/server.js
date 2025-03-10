@@ -13,6 +13,7 @@ Attach controllers and sockets to handle application logic.
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const cors = require('cors'); // Import CORS middleware
 
 // Socket initializers
 const { initLobbySocket } = require('./socket/lobbySocket');
@@ -23,14 +24,23 @@ const { initVotingSocket } = require('./socket/votingSocket');
 const lobbyController = require('./controllers/lobbyController');
 const chatController = require('./controllers/chatController');
 
+// Import the new route for rewriting messages
+const claudeServiceRoute = require('./routes/claudeServiceRoute'); // Import the route
+
 // Initialize Express App
 const app = express();
+app.use(cors({
+  origin: '*', // Allow all origins (modify for production security)
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'], // Customize headers allowed in requests
+}));
 app.use(express.json());
 
 // Mount your REST controllers here if you plan to keep them
 // (These are optional if you're going pure websockets)
 app.use('/api/lobby', lobbyController);
 app.use('/api/chat', chatController);
+app.use('/api/claude', claudeServiceRoute); // Add this line for the Claude service
 
 // Create HTTP Server
 const server = http.createServer(app);

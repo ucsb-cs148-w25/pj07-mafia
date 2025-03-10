@@ -37,11 +37,12 @@ function startVoting(lobbyId, voteType) {
   })));
 
   if (voteType === "mafia") {
-    // Populate candidates: maybe every player except eliminated ones
+    // Populate candidates: all players
     lobby.players.forEach(player => {
-      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
-        newSession.players.add(player.username);
-      }
+      newSession.players.add(player.username);
+      // if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+      //   newSession.players.add(player.username);
+      // }
     });
 
     // Populate voters: only mafia members should vote
@@ -54,8 +55,10 @@ function startVoting(lobbyId, voteType) {
     });
   } else {
     lobby.players.forEach(player => {
+      // all players are candidates
+      newSession.players.add(player.username);
       if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
-        newSession.players.add(player.username);
+        // only active ones can cast vote
         newSession.voters.add(player.username);
       }
     });
