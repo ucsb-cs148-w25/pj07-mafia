@@ -13,7 +13,7 @@ const VotingPopup = ({
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [voteSubmitted, setVoteSubmitted] = useState(false);
 
-  // Close the popup when the voting_complete event is received.
+  // Handle vote acknowledgment and voting complete events
   useEffect(() => {
     const handleVoteComplete = () => {
       console.log("[VOTING] Closing popup as voting is complete.");
@@ -21,23 +21,37 @@ const VotingPopup = ({
         onClose();
       }
     };
+    
+    const handleVoteAcknowledged = (data) => {
+      console.log("[VOTING] Vote acknowledged:", data);
+      if (typeof onClose === "function") {
+        onClose();
+      }
+    };
+    
     socket.on("voting_complete", handleVoteComplete);
+    socket.on("vote_acknowledged", handleVoteAcknowledged);
+    
     return () => {
       socket.off("voting_complete", handleVoteComplete);
+      socket.off("vote_acknowledged", handleVoteAcknowledged);
     };
   }, [onClose]);
 
   // Debug: Log the players list received.
   useEffect(() => {
     console.log("[DEBUG POPUP] Received players list in VotingPopup:", players);
-  }, [players]);
+    console.log("[DEBUG POPUP] Current role in VotingPopup:", role);
+  }, [players, role]);
 
   const filteredPlayers = players
 
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "KILL" : "VOTE"}
+        {role === "Mafia" ? "KILL" : 
+         role === "Doctor" ? "SAVE" :
+         role === "Detective" ? "INVESTIGATE" : "VOTE"}
       </h3>
 
       <select
@@ -62,9 +76,10 @@ const VotingPopup = ({
       <button
         onClick={() => {
           if (selectedPlayer) {
-            console.log(`[VOTING] Vote submitted for ${selectedPlayer}`);
+            console.log(`[VOTING] Submitting vote as ${role} for ${selectedPlayer}`);
             setVoteSubmitted(true);
-            // Delegate vote submission to the parent component.
+            
+            // Let the parent component handle voting
             if (typeof onVote === "function") {
               onVote(selectedPlayer);
             }
@@ -75,7 +90,16 @@ const VotingPopup = ({
         Submit Vote
       </button>
 
-      <button onClick={onClose} disabled={voteSubmitted}>
+      <button 
+        onClick={() => {
+          console.log('[VOTING] Canceling vote');
+          
+          // Let the parent component handle close
+          if (typeof onClose === "function") {
+            onClose();
+          }
+        }} 
+        disabled={voteSubmitted}>
         Cancel
       </button>
     </div>

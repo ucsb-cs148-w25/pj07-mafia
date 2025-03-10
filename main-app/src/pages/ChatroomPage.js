@@ -76,22 +76,71 @@ const ChatroomPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 4. Listen for message: update both displayed messages and conversation log
+  // 4. Listen for message and night results
   useEffect(() => {
     const handleMessage = (m) => {
       debugLog("message", m);
-      setMessages((prev) => [...prev, m]);
+      
+      // Special handling for private messages (like detective results)
+      if (m.isPrivate) {
+        const privateMessage = {
+          ...m,
+          isPrivate: true, // Make sure this flag is set for display purposes
+          text: `[PRIVATE] ${m.text}` // Prefix with PRIVATE for clarity
+        };
+        setMessages(prev => [...prev, privateMessage]);
+      } else {
+        setMessages(prev => [...prev, m]);
+      }
       if (currentPhase === "day"){ //only updates log during the day (for future mafia discussion integration)
         if (m.sender !== "System" && !m.sender.startsWith("Ghost_")){
           setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
         }
       }
     };
+    
+    // Handler for night results
+    const handleNightResults = (results) => {
+      console.log("[DEBUG] Received night results:", results);
+      // We'll handle any special night results processing here
+    };
+    
+    // Handler for detective investigation results
+    const handleDetectiveResult = (result) => {
+      console.log("[DEBUG] Received detective result:", result);
+      
+      // Only show to the detective
+      if (result.forUsername === username) {
+        const privateMessage = {
+          ...result,
+          isPrivate: true,
+          text: `[INVESTIGATION] ${result.text}` // Special prefix for investigations
+        };
+        setMessages(prev => [...prev, privateMessage]);
+      }
+    };
+    
+    // Handler for vote acknowledgments (closes the voting popup for just this client)
+    const handleVoteAcknowledged = (data) => {
+      console.log("[DEBUG] Vote acknowledged:", data);
+      // Adding a small delay to prevent UI freeze
+      setTimeout(() => {
+        setIsVoting(false); // Close the voting popup only for this client
+      }, 100);
+    };
+    
     socket.on("message", handleMessage);
+    socket.on("night_results", handleNightResults);
+    socket.on("detective_result", handleDetectiveResult);
+    socket.on("vote_acknowledged", handleVoteAcknowledged);
+    
     return () => {
       socket.off("message", handleMessage);
+      socket.off("night_results", handleNightResults);
+      socket.off("detective_result", handleDetectiveResult);
+      socket.off("vote_acknowledged", handleVoteAcknowledged);
     };
-  }, []);
+  }, [username]); // Add username as dependency
 
   // 5. Join Chat
   useEffect(() => {
@@ -128,13 +177,31 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 7. Automatically trigger voting session when in voting phase (or for Mafia during night)
+  // 7. Automatically trigger voting session for night roles only
   useEffect(() => {
-    // Only non-eliminated players should trigger the event
-    if (!isEliminated && lobbyId && role) {
-      if (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia")) {
-        const voteTypeToEmit = currentPhase === "voting" ? "villager" : "mafia";
-        socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
+    if (isEliminated) {
+      console.log(`[CHATROOM] this user is eliminated`)
+      return;
+    }
+    
+    // Only auto-trigger votes for night phase special roles
+    if (currentPhase === "night") {
+      // Night phase - initiating role-specific votes
+      if (role) {
+        const lowerRole = role.toLowerCase();
+        
+        if (lowerRole === "mafia") {
+          console.log("[DEBUG] Auto initiating mafia voting", { lobbyId });
+          socket.emit("start_vote", { voteType: "mafia", lobbyId });
+        } 
+        else if (lowerRole === "doctor") {
+          console.log("[DEBUG] Auto initiating doctor voting", { lobbyId });
+          socket.emit("start_vote", { voteType: "doctor", lobbyId });
+        } 
+        else if (lowerRole === "detective") {
+          console.log("[DEBUG] Auto initiating detective voting", { lobbyId });
+          socket.emit("start_vote", { voteType: "detective", lobbyId });
+        }
       }
     }
   }, [currentPhase, role, isEliminated, lobbyId]);
@@ -150,42 +217,89 @@ const ChatroomPage = () => {
   }, [currentPhase, isEliminated]);
 
   const handleVoteButtonClick = () => {
-    setIsVoting(true);
+    // For day voting (voting phase), we need to start the vote first
+    if (currentPhase === "voting") {
+      console.log("[DEBUG] Manual initiation of day voting", { lobbyId });
+      socket.emit("start_vote", { voteType: "villager", lobbyId });
+      // The popup will open when the server responds with open_voting
+    } else {
+      // For night voting, the vote should already be started, just show the popup
+      setIsVoting(true);
+    }
   };
 
 
   // 8. open_voting / voting_complete
+
   useEffect(() => {
     const handleOpenVoting = ({ voteType: incType, voteId: incId, players: incPlayers }) => {
       debugLog("open_voting", { incType, incId, incPlayers });
-      setVoteType(incType);
-      setVoteId(incId);
-
-      // remove yourself from the target list if you don't want self votes
+      console.log("[DEBUG] Received vote type:", incType, "Current user role:", role);
+      
+      if (!incPlayers || incPlayers.length === 0) {
+        console.warn("[DEBUG] Received empty players list in open_voting event");
+        return;
+      }
+      
+      // Remove yourself from the target list if you don't want self votes
       const filtered = incPlayers.filter(
         (playerUsername) =>
           playerUsername.trim().toLowerCase() !== username.trim().toLowerCase()
       );
       setPlayers(filtered);
 
-      if (incType === "mafia") {
-        // only mafia sees the popup
-        if (role && role.toLowerCase() === "mafia") {
-          // setIsVoting(true);
-        } else {
-          setIsVoteLocked(true);
-        }
+      // Set the vote ID
+      setVoteId(incId);
+      
+      // Only show voting popup for the appropriate role
+      let shouldShowVoting = false;
+      
+      // Each role should only see their specific vote type
+      if (incType === "mafia" && role?.toLowerCase() === "mafia") {
+        shouldShowVoting = true;
+        setVoteType("mafia");
+        console.log("[DEBUG] Showing mafia kill vote popup");
+      } 
+      else if (incType === "doctor" && role?.toLowerCase() === "doctor") {
+        shouldShowVoting = true;
+        setVoteType("doctor");
+        console.log("[DEBUG] Showing doctor save vote popup");
+      } 
+      else if (incType === "detective" && role?.toLowerCase() === "detective") {
+        shouldShowVoting = true;
+        setVoteType("detective");
+        console.log("[DEBUG] Showing detective investigate vote popup");
+      } 
+      else if (incType === "villager") {
+        // Everyone votes during day phase
+        shouldShowVoting = true;
+        setVoteType("villager");
+        console.log("[DEBUG] Showing villager vote popup");
+      }
+      
+      // Only show voting popup if this user is eligible and not eliminated
+      if (shouldShowVoting && !isEliminated) {
+        setIsVoting(true);
+        setShowVoteButton(false);
       } else {
-        // villager => everyone can vote
-        // setIsVoting(true);
+        setIsVoteLocked(false);
       }
     };
 
-    const handleVotingComplete = ({ eliminated }) => {
-      debugLog("voting_complete", { eliminated, username});
-      setIsVoting(false);
-      setIsVoteLocked(false);
-      if (eliminated){
+    const handleVotingComplete = ({ eliminated, voteType: completedVoteType }) => {
+      debugLog("voting_complete", { eliminated, username, completedVoteType });
+      
+      // Global voting completion - affects all players
+      setIsVoting(false); // Close any open voting popups
+      setIsVoteLocked(false); // Unlock chat input
+      
+      // Restore vote button for day voting
+      if (completedVoteType === "villager" && currentPhase === "voting" && !isEliminated) {
+        setShowVoteButton(true);
+      }
+      
+      // Handle elimination if there was one
+      if (eliminated) {
         if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
           // Use a functional update so that the latest state is used.
           setIsEliminated(prevIsEliminated => {
@@ -597,17 +711,13 @@ const ChatroomPage = () => {
                   voteId,
                   voter: username,
                   target: targetPlayer,
+                  voterRole: role,
+                  voteType: voteType
                 });
                 setIsVoting(false);
                 setShowVoteButton(false);
               }}
               onClose={() => {
-                socket.emit("submit_vote", {
-                  lobbyId,
-                  voteId,
-                  voter: username,
-                  target: "s3cr3t_1nv1s1bl3_pl@y3r",
-                });
                 setIsVoting(false);
                 setShowVoteButton(false);
               }}
@@ -623,6 +733,12 @@ const ChatroomPage = () => {
             </div>
           )}
         </div>
+      {/* VotingPopup is now handled inside the chat-content div */}
+      {/* Debug voteType */}
+      <div style={{ display: 'none' }}>Current voteType: {voteType}</div>
+      {showEliminationMessage && (
+          <div className="elimination-message">Your presence fades into the unknown… AI takes your place.</div>
+      )}
       </div>
     </div>
   );
