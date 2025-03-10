@@ -222,14 +222,32 @@ function initVotingSocket(io) {
         console.warn(
           `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
         );
-        return;
+      } else {
+        // Start a new voting session
+        voteId = VotingService.startVoting(lobbyId, voteType);
+        if (!voteId) {
+          console.warn(`[VOTING] Failed to start voting for lobby ${lobbyId}`);
+          return;
+        }
+        session = VotingService.getSession(lobbyId, voteId);
+        if (!session) {
+          console.warn(
+            `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
+          );
+          return;
+        }
+        endedVotes[voteId] = false;
+        // Set a timer to auto-end the voting session after VOTING_DURATION seconds
+        setTimeout(() => {
+          const currentSession = VotingService.getSession(lobbyId, voteId);
+          if (currentSession) {
+            console.log("[TIMEOUT] Time limit reached. Ending voting session.");
+            endVotingSession(io, lobbyId, voteId, voteType);
+          }
+        }, VOTING_DURATION * 1000);
       }
-
-      // Reset the ended flag for this vote
-      endedVotes[voteId] = false;
-
-      // Notify clients to open the voting interface
-      io.to(lobbyId).emit("open_voting", {
+      // Send the voting interface event only to the requesting client
+      socket.emit("open_voting", {
         voteType,
         voteId,
         players: Array.from(session.players)

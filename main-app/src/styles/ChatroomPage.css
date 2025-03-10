@@ -448,19 +448,7 @@
 
 /* Dim the entire chatroom when eliminated */
 .chatroom-container.eliminated {
-  animation: dimBrightness 6s forwards;
-}
-
-@keyframes dimBrightness {
-  0% {
-    filter: brightness(0.1); 
-  }
-  75% {
-    filter: brightness(0.3); 
-  }
-  100% {
-    filter: brightness(0.5); /* Increase to 50% by the end */
-  }
+  filter: brightness(0.9) hue-rotate(100deg) saturate(0.6) !important;
 }
 
 /* Disable pointer events for the input area when eliminated */
@@ -504,6 +492,26 @@
 
 .hamburger-icon::after {
   top: 8px;
+}
+.floating-vote-button {
+  position: fixed;
+  top: 50%;
+  right: 20px; /* Adjust the distance from the left edge */
+  transform: translateY(-50%);
+  background-color: #911b0e;
+  color: #f9ecd2;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.floating-vote-button:hover {
+  background-color: #64170e;
 }
 
 .dropdown-header {
