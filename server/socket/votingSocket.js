@@ -210,50 +210,32 @@ function initVotingSocket(io) {
       }
 
       // Start a new voting session
-      const voteId = VotingService.startVoting(lobbyId, voteType);
+      let voteId = VotingService.startVoting(lobbyId, voteType);
       if (!voteId) {
         console.warn(`[VOTING] Failed to start voting for lobby ${lobbyId}`);
         return;
       }
 
       // Retrieve the newly created session
-      const session = VotingService.getSession(lobbyId, voteId);
+      let session = VotingService.getSession(lobbyId, voteId);
       if (!session) {
         console.warn(
           `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
         );
-      } else {
-        // Start a new voting session
-        voteId = VotingService.startVoting(lobbyId, voteType);
-        if (!voteId) {
-          console.warn(`[VOTING] Failed to start voting for lobby ${lobbyId}`);
-          return;
-        }
-        session = VotingService.getSession(lobbyId, voteId);
-        if (!session) {
-          console.warn(
-            `[VOTING] Could not retrieve session for voteId ${voteId} in lobby ${lobbyId}`
-          );
-          return;
-        }
-        endedVotes[voteId] = false;
-        // Set a timer to auto-end the voting session after VOTING_DURATION seconds
-        setTimeout(() => {
-          const currentSession = VotingService.getSession(lobbyId, voteId);
-          if (currentSession) {
-            console.log("[TIMEOUT] Time limit reached. Ending voting session.");
-            endVotingSession(io, lobbyId, voteId, voteType);
-          }
-        }, VOTING_DURATION * 1000);
+        return;
       }
-      // Send the voting interface event only to the requesting client
+
+      // Mark this vote as not ended yet
+      endedVotes[voteId] = false;
+      
+      // Send the voting interface event to the requesting client
       socket.emit("open_voting", {
         voteType,
         voteId,
         players: Array.from(session.players)
       });
 
-      // Set a timer to auto-end the voting session after VOTING_DURATION seconds
+      // Set a timer to auto-end the voting session
       setTimeout(() => {
         const currentSession = VotingService.getSession(lobbyId, voteId);
         if (currentSession) {
