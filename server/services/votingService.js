@@ -59,9 +59,9 @@ function startVoting(lobbyId, voteType) {
   } else if (voteType === "doctor") {
     // Populate candidates: every alive player
     lobby.players.forEach(player => {
-      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
-        newSession.players.add(player.username);
-      }
+      // if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+      newSession.players.add(player.username);
+      // }
     });
 
     // Populate voters: only doctor should vote
@@ -75,9 +75,9 @@ function startVoting(lobbyId, voteType) {
   } else if (voteType === "detective") {
     // Populate candidates: every alive player
     lobby.players.forEach(player => {
-      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
-        newSession.players.add(player.username);
-      }
+      // if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+      newSession.players.add(player.username);
+      // }
     });
 
     // Populate voters: only detective should vote
