@@ -224,21 +224,13 @@ function initVotingSocket(io) {
       // Mark this vote as not ended yet
       endedVotes[voteId] = false;
       
-      // Handle different vote types
-      if (voteType === "villager") {
-        socket.emit("open_voting", {
-          voteType,
-          voteId,
-          players: Array.from(session.players)
-        });
-      } else {
-        // For night roles, broadcast to all players
-        io.to(lobbyId).emit("open_voting", {
-          voteType,
-          voteId,
-          players: Array.from(session.players)
-        });
-      }
+      // Handle voting popup display - only show to the player who initiated it
+      // This is consistent for both day (villager) and night (mafia/doctor/detective) voting
+      socket.emit("open_voting", {
+        voteType,
+        voteId,
+        players: Array.from(session.players)
+      });
 
       // Set a timer to auto-end the voting session
       setTimeout(() => {

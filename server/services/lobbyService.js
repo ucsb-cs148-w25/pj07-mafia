@@ -205,7 +205,7 @@ function startDayNightCycle(lobbyId) {
                 }
               }
               
-              // Broadcast night results to all clients
+              // Broadcast night results to all clients - ensure all clients close voting popups
               io.to(lobbyId).emit("voting_complete", { 
                 eliminated: eliminatedPlayer,
                 voteType: "night_results"
@@ -226,6 +226,19 @@ function startDayNightCycle(lobbyId) {
               });
             } else {
               console.log(`[LOBBY] No night votes found to process at end of night phase`);
+              
+              // Even if no votes were cast, send a voting_complete event to ensure all voting popups are closed
+              io.to(lobbyId).emit("voting_complete", { 
+                eliminated: null,
+                voteType: "night_results"
+              });
+              
+              // Send a generic message about the night passing without incident
+              io.to(lobbyId).emit("message", {
+                sender: "System",
+                text: "An eerie silence lingers… all players remain as they are… for now.",
+                timestamp: new Date()
+              });
             }
             
             // Mark night results as processed

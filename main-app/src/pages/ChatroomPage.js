@@ -177,54 +177,61 @@ const ChatroomPage = () => {
     };
   }, []);
 
-  // 7. Automatically trigger voting session for night roles only
-  useEffect(() => {
-    if (isEliminated) {
-      console.log(`[CHATROOM] this user is eliminated`)
-      return;
-    }
-    
-    // Only auto-trigger votes for night phase special roles
-    if (currentPhase === "night") {
-      // Night phase - initiating role-specific votes
-      if (role) {
-        const lowerRole = role.toLowerCase();
-        
-        if (lowerRole === "mafia") {
-          console.log("[DEBUG] Auto initiating mafia voting", { lobbyId });
-          socket.emit("start_vote", { voteType: "mafia", lobbyId });
-        } 
-        else if (lowerRole === "doctor") {
-          console.log("[DEBUG] Auto initiating doctor voting", { lobbyId });
-          socket.emit("start_vote", { voteType: "doctor", lobbyId });
-        } 
-        else if (lowerRole === "detective") {
-          console.log("[DEBUG] Auto initiating detective voting", { lobbyId });
-          socket.emit("start_vote", { voteType: "detective", lobbyId });
-        }
-      }
-    }
-  }, [currentPhase, role, isEliminated, lobbyId]);
+  // 7. No longer automatically triggering voting popups for night phase
+  // This is now handled through the manual vote button to maintain consistency
+  // with day phase, allowing players to chat until they decide to vote
 
-  // 8. Manual voting popup trigger button: now just opens the voting popup.
+  // 8. Manual voting popup trigger button: now handles both day and night voting
   useEffect(() => {
     // Show the vote button for eligible players (if not eliminated) so they can choose when to vote
-    if (!isEliminated && (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia"))) {
-      setShowVoteButton(true);
+    if (!isEliminated) {
+      if (currentPhase === "voting") {
+        // Everyone can vote during day voting phase
+        setShowVoteButton(true);
+      } else if (currentPhase === "night") {
+        // Only special roles can vote at night
+        if (role) {
+          const lowerRole = role.toLowerCase();
+          if (lowerRole === "mafia" || lowerRole === "doctor" || lowerRole === "detective") {
+            setShowVoteButton(true);
+          } else {
+            setShowVoteButton(false);
+          }
+        } else {
+          setShowVoteButton(false);
+        }
+      } else {
+        setShowVoteButton(false);
+      }
     } else {
       setShowVoteButton(false);
     }
-  }, [currentPhase, isEliminated]);
+  }, [currentPhase, isEliminated, role]);
 
   const handleVoteButtonClick = () => {
-    // For day voting (voting phase), we need to start the vote first
+    // Start the appropriate voting session based on the phase and role
     if (currentPhase === "voting") {
+      // Day phase voting - everyone votes as villager
       console.log("[DEBUG] Manual initiation of day voting", { lobbyId });
       socket.emit("start_vote", { voteType: "villager", lobbyId });
       // The popup will open when the server responds with open_voting
-    } else {
-      // For night voting, the vote should already be started, just show the popup
-      setIsVoting(true);
+    } else if (currentPhase === "night" && role) {
+      // Night phase voting - role-specific voting
+      const lowerRole = role.toLowerCase();
+      
+      if (lowerRole === "mafia") {
+        console.log("[DEBUG] Manual initiation of mafia voting", { lobbyId });
+        socket.emit("start_vote", { voteType: "mafia", lobbyId });
+      } 
+      else if (lowerRole === "doctor") {
+        console.log("[DEBUG] Manual initiation of doctor voting", { lobbyId });
+        socket.emit("start_vote", { voteType: "doctor", lobbyId });
+      } 
+      else if (lowerRole === "detective") {
+        console.log("[DEBUG] Manual initiation of detective voting", { lobbyId });
+        socket.emit("start_vote", { voteType: "detective", lobbyId });
+      }
+      // The popup will open when the server responds with open_voting
     }
   };
 
@@ -673,7 +680,10 @@ const ChatroomPage = () => {
 
             {showVoteButton && !isVoting && !isEliminated && (
             <button className="floating-vote-button" onClick={handleVoteButtonClick}>
-              {currentPhase === "voting" ? "Vote" : "Kill"}
+              {currentPhase === "voting" ? "Vote" : 
+                (role?.toLowerCase() === "mafia" ? "Kill" : 
+                 role?.toLowerCase() === "doctor" ? "Save" : 
+                 role?.toLowerCase() === "detective" ? "Vote" : "Vote")}
             </button>
           )}
 
@@ -721,7 +731,9 @@ const ChatroomPage = () => {
                 setIsVoting(false);
                 setShowVoteButton(false);
               }}
-              role={voteType === "mafia" ? "Mafia" : "Villager"}
+              role={voteType === "mafia" ? "Mafia" : 
+                   voteType === "doctor" ? "Doctor" : 
+                   voteType === "detective" ? "Detective" : "Villager"}
               username={username}
               lobbyId={lobbyId}
             />
