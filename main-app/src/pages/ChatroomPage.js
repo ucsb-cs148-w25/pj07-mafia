@@ -198,21 +198,37 @@ const ChatroomPage = () => {
       debugLog("voting_complete", { eliminated, winner, username });
       setIsVoting(false);
       setIsVoteLocked(false);
-      
       if (eliminated) {
         if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
+          // Use a functional update so that the latest state is used.
+          setIsEliminated((prevIsEliminated) => {
+            if (!prevIsEliminated) {
+              console.log("[ELIMINATION] message displayed");
+              setShowEliminationMessage(true);
+              setTimeout(() => {
+                setShowEliminationMessage(false);
+              }, 6000);
+            }
+            return true;
+          });
           setIsEliminated(true);
           console.log("[DEBUG] Set IsEliminated to True");
-          setShowEliminationMessage(true);
-          setTimeout(() => {
-            setShowEliminationMessage(false);
-          }, 6000);
+        } else {
+          setEliminatedPlayers((prev) => {
+            if (!prev.includes(eliminated)) {
+              console.log("[DEBUG] Adding eliminated player:", eliminated);
+              return [...prev, eliminated];
+            }
+            return prev;
+          });
         }
       }
+      // Added win condition handling
       if (winner) {
         setWinner(winner);
       }
     };
+    
 
     socket.on("open_voting", handleOpenVoting);
     socket.on("voting_complete", handleVotingComplete);
