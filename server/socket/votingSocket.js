@@ -15,10 +15,10 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   if (!session) return;
 
   // End the voting session (VotingService.endVoting should remove the session)
-  const eliminated = VotingService.endVoting(lobbyId, voteId);
+  const { eliminated, winner } = VotingService.endVoting(lobbyId, voteId);
 
   // Notify all clients that voting is complete
-  io.to(lobbyId).emit("voting_complete", { eliminated });
+  io.to(lobbyId).emit("voting_complete", { eliminated, winner });
 
   // Create a message regardless of whether a player was eliminated
   let msg;
