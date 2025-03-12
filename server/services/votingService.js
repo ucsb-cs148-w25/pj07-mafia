@@ -137,66 +137,35 @@ function calculateResults(lobbyId, voteId) {
   console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidate}`);
   return candidate;
 }
+  
+function checkWinCondition(lobbyId) {
+  const lobby = lobbyService.getLobby(lobbyId);
+  if (!lobby) return null;
 
+  let mafiaCount = 0;
+  let villagerCount = 0;
 
-  function checkWinCondition(lobbyId) {
-    const lobby = lobbyService.getLobby(lobbyId);
-    if (!lobby) return null;
-  
-    let mafiaCount = 0;
-    let villagerCount = 0;
-  
-    lobby.players.forEach(player => {
-      if (!player.isAlive) return; // Ignore dead players
-  
-      if (player.role.toLowerCase() === "mafia") {
-        mafiaCount++;
-      } else {
-        villagerCount++;
-      }
-    });
-  
-    if (mafiaCount === 0) {
-      console.log(`[GAME OVER] Villagers win! All mafia eliminated.`);
-      return "villagers";
+  lobby.players.forEach(player => {
+    if (!player.isAlive) return; // Ignore dead players
+    if (player.role.toLowerCase() === "mafia") {
+      mafiaCount++;
+    } else {
+      villagerCount++;
     }
-  
-    if (mafiaCount >= villagerCount) {
-      console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
-      return "mafia";
-    }
-  
-    return null; // No winner yet
+  });
+
+  if (mafiaCount === 0) {
+    console.log(`[GAME OVER] Villagers win! All mafia eliminated.`);
+    return "villagers";
   }
-  
-  function checkWinCondition(lobbyId) {
-    const lobby = lobbyService.getLobby(lobbyId);
-    if (!lobby) return null;
-  
-    let mafiaCount = 0;
-    let villagerCount = 0;
-  
-    lobby.players.forEach(player => {
-      if (!player.isAlive) return; // Ignore dead players
-      if (player.role.toLowerCase() === "mafia") {
-        mafiaCount++;
-      } else {
-        villagerCount++;
-      }
-    });
-  
-    if (mafiaCount === 0) {
-      console.log(`[GAME OVER] Villagers win! All mafia eliminated.`);
-      return "villagers";
-    }
-  
-    if (mafiaCount >= villagerCount) {
-      console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
-      return "mafia";
-    }
-  
-    return null; // No winner yet
+
+  if (mafiaCount >= villagerCount) {
+    console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
+    return "mafia";
   }
+
+  return null; // No winner yet
+}
   
 
   function endVoting(lobbyId, voteId) {
