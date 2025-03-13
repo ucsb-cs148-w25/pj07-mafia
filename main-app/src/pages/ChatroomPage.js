@@ -5,6 +5,17 @@ import VotingPopup from "../components/VotingPopup";
 import "../styles/ChatroomPage.css";
 import config from "../config";
 
+import mafiaImage from "../images/mafia.png";
+import mafiaNightImage from "../images/mafia-night.png";
+import villagerImage from "../images/villager.png";
+import villagerNightImage from "../images/villager-night.png";
+import detectiveImage from "../images/detective.png";
+import detectiveNightImage from "../images/detective-night.png";
+import doctorImage from "../images/doctor.png";
+import doctorNightImage from "../images/doctor-night.png";
+import ghostImage from "../images/ghost.png";
+import killVillager from "../images/kill-villager.png";
+
 const ChatroomPage = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
@@ -434,7 +445,7 @@ const ChatroomPage = () => {
                 className="dropdown-header"
                 onClick={() => setIsFullRuleDropdownOpen((prev) => !prev)}
               >
-                <div className="dropdown-title">Full Rule</div>
+                <div className="dropdown-title">Full Rules</div>
                 <div className="dropdown-icon">
                   {isFullRuleDropdownOpen ? "▼" : "►"}
                 </div>
@@ -472,7 +483,7 @@ const ChatroomPage = () => {
                   className="dropdown-header"
                   onClick={() => setIs404RuleDropdownOpen((prev) => !prev)}
                 >
-                  <div className="dropdown-title">404 Zone Rule</div>
+                  <div className="dropdown-title">404 Zone Rules</div>
                   <div className="dropdown-icon">
                     {is404RuleDropdownOpen ? "▼" : "►"}
                   </div>
@@ -500,6 +511,34 @@ const ChatroomPage = () => {
                 )}
               </div>
             )}
+          </div>
+          <div className="role-image">
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+            <img
+              src={
+                isEliminated
+                  ? ghostImage
+                  : role === 'Mafia'
+                    ? currentPhase === 'night'
+                      ? mafiaNightImage
+                      : mafiaImage
+                  : role === 'Villager'
+                    ? currentPhase === 'night'
+                      ? villagerNightImage
+                      : villagerImage
+                  : role === 'Detective'
+                    ? currentPhase === 'night'
+                      ? detectiveNightImage
+                      : detectiveImage
+                  : role === 'Doctor'
+                    ? currentPhase === 'night'
+                      ? doctorNightImage
+                      : doctorImage
+                  : undefined
+              }
+              alt={role}
+            />
+          )}
           </div>
           {/* Return to Home button */}
           <button
@@ -618,8 +657,13 @@ const ChatroomPage = () => {
           )}
 
           {showEliminationMessage && (
-            <div className="elimination-message">
-              Your presence fades into the unknown… AI takes your place.
+            <div className="elimination-container">
+              <div className="elimination-image">
+                <img src={killVillager} alt="Elimination image" />
+              </div>
+              <div className="elimination-message">
+                Your presence fades into the unknown… AI takes your place.
+              </div>
             </div>
           )}
         </div>

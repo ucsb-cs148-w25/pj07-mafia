@@ -426,6 +426,13 @@
   animation: fadeInOut 6s forwards;
 }
 
+.elimination-image {
+  width: 200px;   /* Shrinks the image to 50% of its original width */
+  position: absolute;
+  top: 110px;
+  animation: fadeInOut 6s forwards;
+}
+
 @keyframes fadeInOut {
   0% { opacity: 0; }
   20% { opacity: 1; }
@@ -435,7 +442,19 @@
 
 /* Dim the entire chatroom when eliminated */
 .chatroom-container.eliminated {
-  filter: brightness(0.9) hue-rotate(100deg) saturate(0.6) !important;
+  animation: applyFilter 6s forwards;
+}
+
+@keyframes applyFilter {
+  0% {
+    filter: none;
+  }
+  95% {
+    filter: none;
+  }
+  100% {
+    filter: brightness(0.9) hue-rotate(100deg) saturate(0.6);
+  }
 }
 
 /* Disable pointer events for the input area when eliminated */
@@ -507,3 +526,17 @@
 /* .night-mode .role-banner {
   color: #110101;
 } */
+
+.role-image {
+  display: flex;
+  justify-content: center;
+}
+
+.role-image img {
+  width: 200px;   /* Shrinks the image to 50% of its original width */
+  position: relative;
+  top: 110px;
+  padding-left: 15px;
+  padding-right: 15px;
+  height: auto; /* Maintains the aspect ratio */
+}
