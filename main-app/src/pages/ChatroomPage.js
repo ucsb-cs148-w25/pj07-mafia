@@ -15,6 +15,8 @@ import doctorImage from "../images/doctor.png";
 import doctorNightImage from "../images/doctor-night.png";
 import ghostImage from "../images/ghost.png";
 import killVillager from "../images/kill-villager.png";
+import killDoctor from "../images/kill-doctor.png";
+import killDetective from "../images/kill-detective.png";
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
@@ -657,9 +659,11 @@ const ChatroomPage = () => {
           )}
 
           {showEliminationMessage && (
-            <div className="elimination-container">
+            <div className="elimination-overlay">
               <div className="elimination-image">
-                <img src={killVillager} alt="Elimination image" />
+                <img src={role === 'Villager' ? killVillager :
+                          role === 'Doctor' ? killDoctor : killDetective}>
+                </img>
               </div>
               <div className="elimination-message">
                 Your presence fades into the unknown… AI takes your place.
