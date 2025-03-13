@@ -137,30 +137,65 @@ function calculateResults(lobbyId, voteId) {
   console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidate}`);
   return candidate;
 }
+  
+function checkWinCondition(lobbyId) {
+  const lobby = lobbyService.getLobby(lobbyId);
+  if (!lobby) return null;
 
-function endVoting(lobbyId, voteId) {
-  const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
-  if (sessionIndex === -1 || sessionIndex === undefined) return null;
+  let mafiaCount = 0;
+  let villagerCount = 0;
 
-  const eliminatedPlayer = calculateResults(lobbyId, voteId);
-
-  if (eliminatedPlayer) {
-    eliminatedPlayers[lobbyId].add(eliminatedPlayer);
-
-    // Mark them as not alive in the lobby
-    const lobby = lobbyService.getLobby(lobbyId);
-    if (lobby) {
-      const p = lobby.players.find((pl) => pl.username === eliminatedPlayer);
-      if (p) {
-        p.isAlive = false;
-      }
+  lobby.players.forEach(player => {
+    if (!player.isAlive) return; // Ignore dead players
+    if (player.role.toLowerCase() === "mafia") {
+      mafiaCount++;
+    } else {
+      villagerCount++;
     }
+  });
+
+  if (mafiaCount === 0) {
+    console.log(`[GAME OVER] Villagers win! All mafia eliminated.`);
+    return "villagers";
   }
 
-  // Remove session
-  votingSessions[lobbyId].splice(sessionIndex, 1);
-  return eliminatedPlayer;
+  if (mafiaCount >= villagerCount) {
+    console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
+    return "mafia";
+  }
+
+  return null; // No winner yet
 }
+  
+
+  function endVoting(lobbyId, voteId) {
+    const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
+    if (sessionIndex === -1 || sessionIndex === undefined)
+      return { eliminated: null, winner: null };
+  
+    const eliminatedPlayer = calculateResults(lobbyId, voteId);
+  
+    if (eliminatedPlayer) {
+      eliminatedPlayers[lobbyId].add(eliminatedPlayer);
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        const p = lobby.players.find(pl => pl.username === eliminatedPlayer);
+        if (p) {
+          p.isAlive = false;
+        }
+      }
+    }
+  
+    // Remove the voting session
+    votingSessions[lobbyId].splice(sessionIndex, 1);
+  
+    const winner = checkWinCondition(lobbyId);
+    if (winner) {
+      console.log(`[GAME OVER] ${winner.toUpperCase()} wins the game.`);
+    }
+  
+    return { eliminated: eliminatedPlayer, winner };
+  }  
 
 function getVotingSessions(lobbyId) {
   return votingSessions[lobbyId] || [];
