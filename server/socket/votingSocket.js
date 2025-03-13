@@ -15,8 +15,6 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   // End the voting session (calculates who was eliminated)
   const { eliminated, winner } = VotingService.endVoting(lobbyId, voteId);
 
-  // Possibly check if the game is over (if winner != null).
-  // If not over, pick next phase
   const lobby = lobbyService.getLobby(lobbyId);
   if (lobby) {
     if (lobby.phase === "voting") {
@@ -25,7 +23,6 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
       lobby.phase = "day";
     }
 
-    // Instead of making a new timer, just call the day/night cycle
     lobbyService.startDayNightCycle(lobbyId, io);
   }
 
