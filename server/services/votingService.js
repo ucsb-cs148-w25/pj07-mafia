@@ -39,7 +39,9 @@ function startVoting(lobbyId, voteType) {
   if (voteType === "mafia") {
     // Populate candidates: all players
     lobby.players.forEach(player => {
-      newSession.players.add(player.username);
+      if (player.role.toLowerCase() !== "mafia"){
+        newSession.players.add(player.username);
+      }
       // if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
       //   newSession.players.add(player.username);
       // }
@@ -130,6 +132,15 @@ function calculateResults(lobbyId, voteId) {
   if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r") {
     console.log(
       `[VOTING] session ${voteId} in lobby ${lobbyId} ended with a tie or abstention.`
+    );
+    return null;
+  }
+
+  // If maxVotes less than half of the voters, no one is eliminated
+  num_voters = session.voters.size
+  if (maxVotes < num_voters / 2){
+    console.log(
+      `[VOTING] session ${voteId} in lobby ${lobbyId} ended with non-majority vote. The maxVote was ${maxVotes} given ${num_voters} voters`
     );
     return null;
   }

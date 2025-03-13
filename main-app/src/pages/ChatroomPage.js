@@ -94,7 +94,7 @@ const ChatroomPage = () => {
     const handleMessage = (m) => {
       debugLog("message", m);
       setMessages((prev) => [...prev, m]);
-      if (currentPhase === "day"){ //only updates log during the day (for future mafia discussion integration)
+      if (currentPhase !== "night"){ //only updates log during the day and voting
         if (m.sender !== "System" && !m.sender.startsWith("Ghost_")){
           setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
         }
@@ -253,7 +253,7 @@ const ChatroomPage = () => {
     }
 
     // If it's day and not system => add to conversation log
-    if (currentPhase === "day") {
+    if (currentPhase !== "night") {
       const newEntry = { sender: username, content: newText };
       const updatedLog = [...conversationLog, newEntry];
       setConversationLog(updatedLog);
