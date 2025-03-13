@@ -1,37 +1,47 @@
 const { VOTING_DURATION } = require("../constants");
 const VotingService = require("../services/votingService");
+const lobbyService = require("../services/lobbyService");
 
 // Object to track if a vote has already been ended
 const endedVotes = {};
 
 function endVotingSession(io, lobbyId, voteId, voteType) {
-  // If this vote was already ended, do nothing.
   if (endedVotes[voteId]) return;
+  endedVotes[voteId] = true;
 
-  endedVotes[voteId] = true; // mark as ended
-
-  // Retrieve the session (if it still exists)
   const session = VotingService.getSession(lobbyId, voteId);
   if (!session) return;
 
-  // End the voting session (VotingService.endVoting should remove the session)
+  // End the voting session (calculates who was eliminated)
   const { eliminated, winner } = VotingService.endVoting(lobbyId, voteId);
 
-  // Notify all clients that voting is complete
+  // Possibly check if the game is over (if winner != null).
+  // If not over, pick next phase
+  const lobby = lobbyService.getLobby(lobbyId);
+  if (lobby) {
+    if (lobby.phase === "voting") {
+      lobby.phase = "night";
+    } else if (lobby.phase === "night") {
+      lobby.phase = "day";
+    }
+
+    // Instead of making a new timer, just call the day/night cycle
+    lobbyService.startDayNightCycle(lobbyId, io);
+  }
+
+  // Emit the results
   io.to(lobbyId).emit("voting_complete", { eliminated, winner });
 
-  // Create a message regardless of whether a player was eliminated
+  // Send a flavor message
   let msg;
   if (eliminated) {
-    msg =
-      voteType === "mafia"
-        ? `A quiet strike in the dark… a player has been replaced by AI.`
-        : `The majority has spoken… a player has been replaced by AI.`;
+    msg = voteType === "mafia"
+      ? "A quiet strike in the dark… a player has been replaced by AI."
+      : "The majority has spoken… a player has been replaced by AI.";
   } else {
-    msg =
-      voteType === "mafia"
-        ? `An eerie silence lingers… all players remain as they are… for now.`
-        : `The vote is tied. All players remain as they are… for now.`;
+    msg = voteType === "mafia"
+      ? "An eerie silence lingers… all players remain as they are… for now."
+      : "The vote is tied. All players remain as they are… for now.";
   }
   io.to(lobbyId).emit("message", {
     sender: "System",
