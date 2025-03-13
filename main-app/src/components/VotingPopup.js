@@ -44,7 +44,7 @@ const VotingPopup = ({
     console.log("[DEBUG POPUP] Current role in VotingPopup:", role);
   }, [players, role]);
 
-  const filteredPlayers = players.slice(0) // Create a copy without limiting the number of players
+  const filteredPlayers = players.slice(0)
 
   return (
     <div className="voting-popup">
