@@ -122,15 +122,8 @@ function castVote(lobbyId, voteId, voter, target) {
 
   // Duplicate vote check
   if (session.votes.hasOwnProperty(voter)) {
-    if (session.voteType === "villager") {
-      // For villager voting (day phase), allow players to change their vote
-      console.log(`[VOTING] Allowing vote change for ${voter}: ${session.votes[voter]} → ${target}`);
-      // Continue processing to overwrite the previous vote
-    } else {
-      // For night roles, disallow vote changes
-      console.warn(`[VOTING] Duplicate vote from ${voter} in session ${voteId} (Lobby ${lobbyId}).`);
-      return;
-    }
+    console.warn(`[VOTING] Duplicate vote from ${voter} in session ${voteId} (Lobby ${lobbyId}).`);
+    return;
   }
 
   // Log the session state before validating
@@ -207,9 +200,39 @@ function calculateResults(lobbyId, voteId) {
   return candidate;
 }
 
+function checkWinCondition(lobbyId) {
+  const lobby = lobbyService.getLobby(lobbyId);
+  if (!lobby) return null;
+
+  let mafiaCount = 0;
+  let villagerCount = 0;
+
+  lobby.players.forEach(player => {
+    if (!player.isAlive) return; // Ignore dead players
+    if (player.role.toLowerCase() === "mafia") {
+      mafiaCount++;
+    } else {
+      villagerCount++;
+    }
+  });
+
+  if (mafiaCount === 0) {
+    console.log(`[GAME OVER] Villagers win! All mafia eliminated.`);
+    return "villagers";
+  }
+
+  if (mafiaCount >= villagerCount) {
+    console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
+    return "mafia";
+  }
+
+  return null; // No winner yet
+}
+
 function endVoting(lobbyId, voteId) {
   const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
-  if (sessionIndex === -1 || sessionIndex === undefined) return null;
+  if (sessionIndex === -1 || sessionIndex === undefined)
+      return { eliminated: null, winner: null };
 
   const session = votingSessions[lobbyId][sessionIndex];
   const voteType = session.voteType;
@@ -265,7 +288,13 @@ function endVoting(lobbyId, voteId) {
     }
   }
   
-  return eliminatedPlayer;
+  const winner = checkWinCondition(lobbyId);
+    if (winner) {
+      console.log(`[GAME OVER] ${winner.toUpperCase()} wins the game.`);
+    }
+  
+
+  return { eliminated: eliminatedPlayer, winner };
 }
 
 // Check if all night roles have cast their votes

@@ -1,0 +1,68 @@
+@font-face {
+  font-family: 'gothic';
+  src: url('mirage.ttf') format('truetype');
+}
+
+.winner-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(164, 140, 108, 0.95); /* semi-transparent background */
+    z-index: 9999; /* on top of everything */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .winner-popup-overlay.night {
+    background: rgba(0, 0, 0, 0.9); /* semi-transparent background */
+  }
+
+
+  .winner-popup-overlay img {
+    width: 100%;
+}
+
+  .mafia-win {
+    max-width: 500px;
+  }
+
+  .villager-win {
+    max-width: 750px;;
+  }
+
+  .winner-popup-modal p {
+    margin-top: -15px;
+    margin-bottom: -10px;
+    color: #f9ecd2;
+  }
+
+  .winner-popup-modal button {
+    margin-top: 40px;
+    margin-left: 20px;
+    padding: 10px 30px;
+    border: none;
+    border-radius: 4px;
+    background-color: #911b0e;
+    color: #f9ecd2;
+    cursor: pointer;
+    font-family: 'gothic';
+    letter-spacing: 2px;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* .winner-popup-overlay.night .winner-popup-modal button {
+    color: #f9ecd2;
+  } */
+  
+  .winner-popup-modal {
+    max-width: 100%;
+    text-align: center;
+    font-family: 'gothic';
+    font-size: 50px;
+  }
+  
+  

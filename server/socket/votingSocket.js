@@ -30,32 +30,6 @@ function processNightResults(io, lobbyId) {
       }
     }
   }
-  
-  // Broadcast results to clients
-  io.to(lobbyId).emit("voting_complete", { 
-    eliminated: eliminatedPlayer,
-    voteType: "night_results"
-  });
-  
-  // Send thematic message about the night's events
-  const msg = eliminatedPlayer 
-    ? `A quiet strike in the dark… a player has been replaced by AI.`
-    : `An eerie silence lingers… all players remain as they are… for now.`;
-  
-  io.to(lobbyId).emit("message", {
-    sender: "System",
-    text: msg,
-    timestamp: new Date()
-  });
-  
-  // Clean up
-  VotingService.clearVotingSessions(lobbyId);
-  
-  // Reset for next night
-  setTimeout(() => {
-    VotingService.nightVotes[lobbyId] = { mafia: null, doctor: null, detective: null };
-    delete processedNightResults[lobbyId];
-  }, 1000);
 }
 
 function endVotingSession(io, lobbyId, voteId, voteType) {
@@ -73,7 +47,7 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   console.log(`[VOTING] Ending ${voteType} session with ${Object.keys(session.votes).length} votes`);
   
   // End the voting session and get the result
-  const result = VotingService.endVoting(lobbyId, voteId);
+  const { result, winner } = VotingService.endVoting(lobbyId, voteId);
 
   // Special handling for different vote types
   if (result && typeof result === 'object' && result.type) {
@@ -86,7 +60,7 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
     // Handle night results
     if (result.type === 'night_results') {
       // Notify all clients that night voting is complete
-      io.to(lobbyId).emit("voting_complete", { eliminated: result.eliminated });
+      io.to(lobbyId).emit("voting_complete", { eliminated: result.eliminated, winner });
       
       // Create a message based on night results
       let msg;
@@ -109,7 +83,7 @@ function endVotingSession(io, lobbyId, voteId, voteType) {
   const eliminated = result;
   
   // Notify all clients that voting is complete
-  io.to(lobbyId).emit("voting_complete", { eliminated });
+  io.to(lobbyId).emit("voting_complete", { eliminated, winner });
 
   // Only send a system message for day phase voting or if it's a standalone mafia vote
   if (voteType === "villager" || voteType === "mafia") {

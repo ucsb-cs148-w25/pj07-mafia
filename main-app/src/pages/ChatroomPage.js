@@ -2,8 +2,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import socket from "../service/socket";
 import VotingPopup from "../components/VotingPopup"; 
+import WinnerPopup from "../components/WinnerPopup";
 import "../styles/ChatroomPage.css";
 import config from "../config";
+
+import mafiaImage from "../images/mafia.png";
+import mafiaNightImage from "../images/mafia-night.png";
+import villagerImage from "../images/villager.png";
+import villagerNightImage from "../images/villager-night.png";
+import detectiveImage from "../images/detective.png";
+import detectiveNightImage from "../images/detective-night.png";
+import doctorImage from "../images/doctor.png";
+import doctorNightImage from "../images/doctor-night.png";
+import ghostImage from "../images/ghost.png";
+import killVillager from "../images/kill-villager.png";
+import killDoctor from "../images/kill-doctor.png";
+import killDetective from "../images/kill-detective.png";
 
 const ChatroomPage = () => {
   const navigate = useNavigate();
@@ -46,6 +60,18 @@ const ChatroomPage = () => {
   const thres = config.THRESHOLD;
 
   const debugLog = (msg, data = null) => console.log(`[DEBUG] ${msg}`, data);
+
+  const [winner, setWinner] = useState(null);
+  const [showWinnerPopup, setShowWinnerPopup] = useState(false);
+
+  useEffect(() => {
+    if (winner) {
+      console.log(`[DEBUG] Winner declared: ${winner}`);
+      setTimeout(() => {
+        setShowWinnerPopup(true);
+      }, 3000);
+    }
+  }, [winner]);  
 
   // 1. Load username
   useEffect(() => {
@@ -293,8 +319,8 @@ const ChatroomPage = () => {
       }
     };
 
-    const handleVotingComplete = ({ eliminated, voteType: completedVoteType }) => {
-      debugLog("voting_complete", { eliminated, username, completedVoteType });
+    const handleVotingComplete = ({ eliminated, winner, voteType: completedVoteType }) => {
+      debugLog("voting_complete", { eliminated, winner, username , completedVoteType });
       
       // Global voting completion - affects all players
       setIsVoting(false); // Close any open voting popups
@@ -306,10 +332,10 @@ const ChatroomPage = () => {
       }
       
       // Handle elimination if there was one
-      if (eliminated) {
+      if (eliminated)  {
         if (eliminated.trim().toLowerCase() === username.trim().toLowerCase()) {
           // Use a functional update so that the latest state is used.
-          setIsEliminated(prevIsEliminated => {
+          setIsEliminated((prevIsEliminated) => {
             if (!prevIsEliminated) {
               console.log("[ELIMINATION] message displayed");
               setShowEliminationMessage(true);
@@ -331,7 +357,12 @@ const ChatroomPage = () => {
           });
         }
       }
+      // Added win condition handling
+      if (winner) {
+        setWinner(winner);
+      }
     };
+    
 
     socket.on("open_voting", handleOpenVoting);
     socket.on("voting_complete", handleVotingComplete);
@@ -455,11 +486,11 @@ const ChatroomPage = () => {
   }, [isResizing]);
 
   return (
-    <div
-      className={`chatroom-container ${
-        currentPhase === "night" || isEliminated ? "night-mode" : ""
-      } ${isEliminated ? "eliminated" : ""}`}
-    >
+    <div className={`chatroom-container ${
+         currentPhase === "night" || isEliminated ? "night-mode" : ""
+         } ${isEliminated && winner ? "eliminated-winner" : ""} 
+           ${isEliminated && !winner ? "eliminated" : ""
+         }`}>
       {/* 1) Full-width chatroom header */}
       <div className="chatroom-header">
         <h2>{isEliminated? "404 ZONE" : currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
@@ -471,6 +502,19 @@ const ChatroomPage = () => {
 
           <div className="phase-timer">{formatTime(timeLeft)}</div>
         </div>
+
+        {/* Winner Popup */}
+        {showWinnerPopup && winner && (
+          <WinnerPopup
+            winner={winner}
+            onClose={() => {
+              setShowWinnerPopup(false);
+              navigate("/");
+            }}
+            phase={currentPhase}
+          />
+        )}
+
 
         {/* 2) Body container: flex row => sidebar + chat content */}
         <div className="chatroom-body">
@@ -622,6 +666,34 @@ const ChatroomPage = () => {
               </div>
             )}
           </div>
+          <div className="role-image">
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+            <img
+              src={
+                isEliminated
+                  ? ghostImage
+                  : role === 'Mafia'
+                    ? currentPhase === 'night'
+                      ? mafiaNightImage
+                      : mafiaImage
+                  : role === 'Villager'
+                    ? currentPhase === 'night'
+                      ? villagerNightImage
+                      : villagerImage
+                  : role === 'Detective'
+                    ? currentPhase === 'night'
+                      ? detectiveNightImage
+                      : detectiveImage
+                  : role === 'Doctor'
+                    ? currentPhase === 'night'
+                      ? doctorNightImage
+                      : doctorImage
+                  : undefined
+              }
+              alt={role}
+            />
+          )}
+          </div>
           {/* Return to Home button */}
           <button
             className="return-home-button"
@@ -687,7 +759,7 @@ const ChatroomPage = () => {
             </button>
           )}
 
-          {!isVoting && (currentPhase !== "night" || role === "Mafia" || isEliminated) && (
+          {!winner && !isVoting && (currentPhase !== "night" || role === "Mafia" || isEliminated) && (
             // 1. All players can talk during the day if not in the middle of voting
             // 2. Mafia can always talk when not voting
             // 3. Eliminated players can always talk (they should never vote)
@@ -739,9 +811,18 @@ const ChatroomPage = () => {
             />
           )}
 
-          {showEliminationMessage && (
-            <div className="elimination-message">
-              Your presence fades into the unknown… AI takes your place.
+          {!winner && showEliminationMessage && (
+            <div className="elimination-overlay">
+              <div className="elimination-image">
+                <img src={role === 'Villager' ? killVillager :
+                          role === 'Doctor' ? killDoctor : 
+                          role === 'Detective' ? killDetective :
+                          undefined}>
+                </img>
+              </div>
+              <div className="elimination-message">
+                Your presence fades into the unknown… AI takes your place.
+              </div>
             </div>
           )}
         </div>
