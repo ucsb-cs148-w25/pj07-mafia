@@ -159,7 +159,7 @@ function checkWinCondition(lobbyId) {
     return "villagers";
   }
 
-  if (mafiaCount > villagerCount) {
+  if (mafiaCount >= villagerCount) {
     console.log(`[GAME OVER] Mafia wins! They outnumber the villagers.`);
     return "mafia";
   }
