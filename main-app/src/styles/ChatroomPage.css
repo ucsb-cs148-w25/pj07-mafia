@@ -50,7 +50,7 @@
   justify-content: space-between;
   height: 100%;
   box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.3), 4px 0px 6px rgba(88, 0, 0, 0.3);
-  min-width: 200px; /* Prevents it from becoming too small */
+  min-width: 0px; /* Prevents it from becoming too small */
   max-width: 600px; /* Prevents it from becoming too large */
   position: relative;
 }
@@ -551,7 +551,7 @@
 .role-image img {
   width: 200px;   /* Shrinks the image to 50% of its original width */
   position: relative;
-  top: 110px;
+  top: 90px;
   padding-left: 15px;
   padding-right: 15px;
   height: auto; /* Maintains the aspect ratio */
