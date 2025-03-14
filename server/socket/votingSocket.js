@@ -1,4 +1,4 @@
-const { VOTING_DURATION } = require("../constants");
+const { VOTING_DURATION, NIGHT_DURATION } = require("../constants");
 const VotingService = require("../services/votingService");
 
 // Object to track if a vote has already been ended
@@ -75,13 +75,14 @@ function initVotingSocket(io) {
         }
         endedVotes[voteId] = false;
         // Set a timer to auto-end the voting session after VOTING_DURATION seconds
+        const duration = voteType === "villager"? VOTING_DURATION : NIGHT_DURATION
         setTimeout(() => {
           const currentSession = VotingService.getSession(lobbyId, voteId);
           if (currentSession) {
             console.log("[TIMEOUT] Time limit reached. Ending voting session.");
             endVotingSession(io, lobbyId, voteId, voteType);
           }
-        }, VOTING_DURATION * 1000);
+        }, duration * 1000);
       }
       // Send the voting interface event only to the requesting client
       socket.emit("open_voting", {
