@@ -46,6 +46,12 @@ function initChatSocket(io) {
       if (lobby.hasStarted && player.role) {
         socket.emit("roleAssigned", { role: player.role });
       }
+
+      // If the player is a detective, join the detective room for private messages.
+      if (player.role && player.role.toLowerCase() === "detective") {
+        socket.join(`${lobbyId}_detectives`);
+        console.log(`joinChatroom: Detective ${player.username} joined room ${lobbyId}_detectives for private messages.`);
+      }
     });
 
     // 2. requestRole

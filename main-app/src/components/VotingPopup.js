@@ -32,12 +32,27 @@ const VotingPopup = ({
     console.log("[DEBUG POPUP] Received players list in VotingPopup:", players);
   }, [players]);
 
-  const filteredPlayers = players
+  const filteredPlayers = players;
+  console.log("[NEW DEBUG] ", role)
+  let text;
+  switch (role) {
+    case "mafia":
+      text = "KILL";
+      break;
+    case "doctor":
+      text = "HEAL";
+      break;
+    case "detective":
+      text = "INVESTIGATE";
+      break;
+    default:
+      text = "VOTE";
+  }
 
   return (
     <div className="voting-popup">
       <h3>
-        {role === "Mafia" ? "KILL" : "VOTE"}
+        {text}
       </h3>
 
       <select
