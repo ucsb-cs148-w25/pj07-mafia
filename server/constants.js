@@ -7,7 +7,7 @@ const NIGHT_DURATION = 60;
 
 //role constants
 const MIN_PLAYERS = 6;
-const MAX_PLAYERS = 20;
+const MAX_PLAYERS = 10;
 const TWO_MAFIA_LIMIT = 10;
 const THREE_MAFIA_LIMIT = 15;
 const TWO_DOC_LIMIT = 11;
