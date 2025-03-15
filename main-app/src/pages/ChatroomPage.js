@@ -6,6 +6,19 @@ import WinnerPopup from "../components/WinnerPopup";
 import "../styles/ChatroomPage.css";
 import config from "../config";
 
+import mafiaImage from "../images/mafia.png";
+import mafiaNightImage from "../images/mafia-night.png";
+import villagerImage from "../images/villager.png";
+import villagerNightImage from "../images/villager-night.png";
+import detectiveImage from "../images/detective.png";
+import detectiveNightImage from "../images/detective-night.png";
+import doctorImage from "../images/doctor.png";
+import doctorNightImage from "../images/doctor-night.png";
+import ghostImage from "../images/ghost.png";
+import killVillager from "../images/kill-villager.png";
+import killDoctor from "../images/kill-doctor.png";
+import killDetective from "../images/kill-detective.png";
+
 const ChatroomPage = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
@@ -366,11 +379,11 @@ const ChatroomPage = () => {
   }, []);
 
   return (
-    <div
-      className={`chatroom-container ${
-        currentPhase === "night" || isEliminated ? "night-mode" : ""
-      } ${isEliminated ? "eliminated" : ""}`}
-    >
+    <div className={`chatroom-container ${
+         currentPhase === "night" || isEliminated ? "night-mode" : ""
+         } ${isEliminated && winner ? "eliminated-winner" : ""} 
+           ${isEliminated && !winner ? "eliminated" : ""
+         }`}>
       {/* 1) Full-width chatroom header */}
       <div className="chatroom-header">
         <h2>{isEliminated? "404 ZONE" : currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
@@ -391,6 +404,7 @@ const ChatroomPage = () => {
               setShowWinnerPopup(false);
               navigate("/");
             }}
+            phase={currentPhase}
           />
         )}
 
@@ -544,6 +558,34 @@ const ChatroomPage = () => {
                 )}
               </div>
             )}
+          </div>
+          <div className="role-image">
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+            <img
+              src={
+                isEliminated
+                  ? ghostImage
+                  : role === 'Mafia'
+                    ? currentPhase === 'night'
+                      ? mafiaNightImage
+                      : mafiaImage
+                  : role === 'Villager'
+                    ? currentPhase === 'night'
+                      ? villagerNightImage
+                      : villagerImage
+                  : role === 'Detective'
+                    ? currentPhase === 'night'
+                      ? detectiveNightImage
+                      : detectiveImage
+                  : role === 'Doctor'
+                    ? currentPhase === 'night'
+                      ? doctorNightImage
+                      : doctorImage
+                  : undefined
+              }
+              alt={role}
+            />
+          )}
           </div>
           {/* Return to Home button */}
           <button
@@ -713,9 +755,18 @@ const ChatroomPage = () => {
           />
         )}
 
-          {showEliminationMessage && (
-            <div className="elimination-message">
-              Your presence fades into the unknown… AI takes your place.
+          {!winner && showEliminationMessage && (
+            <div className="elimination-overlay">
+              <div className="elimination-image">
+                <img src={role === 'Villager' ? killVillager :
+                          role === 'Doctor' ? killDoctor : 
+                          role === 'Detective' ? killDetective :
+                          undefined}>
+                </img>
+              </div>
+              <div className="elimination-message">
+                Your presence fades into the unknown… AI takes your place.
+              </div>
             </div>
           )}
         </div>
