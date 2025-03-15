@@ -4,6 +4,7 @@ import socket from "../service/socket";
 import "../styles/LobbyPage.css"; // Import your CSS
 import avatar from "../styles/avatar.png";
 
+
 function LobbyPage() {
   const { lobbyId: routeLobbyId } = useParams();
   const navigate = useNavigate();
@@ -16,6 +17,26 @@ function LobbyPage() {
   const [username, setUsername] = useState("");
   const [isUsernameSet, setIsUsernameSet] = useState(false);
 
+
+  useEffect(() => {
+    // 1) Make sure we are connected. If already connected, calling connect() does no harm,
+    //    but if we previously disconnected, this will re-establish the connection.
+    if (!socket.connected) {
+      socket.connect(); 
+    }
+
+    // 2) Once connected, the userEffect below triggers all your "on" listeners
+    //    and your join/create logic. But to be sure, sometimes you handle "connect" event:
+    socket.on("connect", () => {
+      console.log("Socket is connected in the lobby page:", socket.id);
+    });
+
+    // Cleanup
+    return () => {
+      socket.off("connect");
+    };
+  }, []);
+  
   // Listen for lobby-related events
   useEffect(() => {
     if (!socket) return;
@@ -84,6 +105,7 @@ function LobbyPage() {
 
   // Handlers
   const handleBackToHome = () => {
+    socket.disconnect();
     navigate("/");
   };
 

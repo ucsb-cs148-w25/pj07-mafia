@@ -18,42 +18,49 @@ function initChatSocket(io) {
     // 1. joinChatroom
     socket.on("joinChatroom", ({ lobbyId, username }, ack) => {
       socket.join(lobbyId);
-
+    
       const lobby = lobbyService.getLobby(lobbyId);
       if (!lobby) {
-        console.log(`joinChatroom: Lobby ${lobbyId} does NOT exist.`);
         if (ack) ack({ error: "Lobby does not exist." });
         return socket.emit("lobbyError", { message: "Lobby does not exist." });
       }
-
+    
       const player = lobby.players.find((p) => p.socketId === socket.id);
       if (!player) {
-        console.log(`joinChatroom: Player with socketId ${socket.id} not found in Lobby ${lobbyId}.`);
         if (ack) ack({ error: "You are not in this lobby." });
         return socket.emit("lobbyError", { message: "You are not in this lobby." });
       }
-
+    
       console.log(`joinChatroom: Player ${player.username} joined chat in Lobby ${lobbyId}.`);
-
-      if (ack) ack({ success: true });
-
+    
+      // <--- ADD THIS: Return the current list of all players in this chat/lobby
+      if (ack) {
+        ack({
+          success: true,
+          players: lobby.players.map((p) => p.username), 
+        });
+      }
+    
       socket.to(lobbyId).emit("message", {
         text: `${player.username} has joined the chat.`,
         sender: "System",
         timestamp: new Date(),
       });
-
+    
+      // If the game has started and the player already has a role
       if (lobby.hasStarted && player.role) {
         socket.emit("roleAssigned", { role: player.role });
       }
-
-      // If the player is a detective, join the detective room for private messages.
+    
+      // If the player is detective, also join the detective room
       if (player.role && player.role.toLowerCase() === "detective") {
         socket.join(`${lobbyId}_detectives`);
-        console.log(`joinChatroom: Detective ${player.username} joined room ${lobbyId}_detectives for private messages.`);
+        console.log(
+          `Detective ${player.username} joined room ${lobbyId}_detectives for private messages.`
+        );
       }
     });
-
+    
     // 2. requestRole
     socket.on('requestRole', ({ lobbyId }) => {
       const lobby = lobbyService.getLobby(lobbyId);
@@ -116,15 +123,13 @@ function initChatSocket(io) {
       if (phase === "day" || phase === "voting") {
         // all alive
         lobby.players.forEach((pl) => {
-          if (pl.isAlive) {
             io.to(pl.socketId).emit("message", msgObj);
-          }
         });
       } else if (phase === "night") {
         // mafia only sees mafia, non-mafia sees self
         if (isMafia) {
           lobby.players.forEach((pl) => {
-            if (pl.isAlive && (pl.role || "").toLowerCase() === "mafia") {
+            if ((pl.role || "").toLowerCase() === "mafia") {
               io.to(pl.socketId).emit("message", msgObj);
             }
           });
@@ -187,15 +192,32 @@ function initChatSocket(io) {
     });
 
     // 4. leaveChatroom
-    socket.on('leaveChatroom', ({ lobbyId, username }) => {
+    socket.on("leaveChatroom", ({ lobbyId, username }) => {
       socket.leave(lobbyId);
-
-      socket.to(lobbyId).emit('message', {
-        text: `${username} has left the chat.`,
-        sender: 'System',
-        timestamp: new Date(),
-      });
+    
+      const lobby = lobbyService.getLobby(lobbyId);
+      if (lobby) {
+        // Remove them from the local lobby players list if you want them gone from the entire game
+        const idx = lobby.players.findIndex((p) => p.socketId === socket.id);
+        if (idx !== -1) {
+          lobby.players.splice(idx, 1);
+        }
+    
+        // Broadcast an updated player list
+        io.to(lobbyId).emit("chatroomUpdated", {
+          players: lobby.players.map((p) => p.username),
+        });
+    
+        socket.to(lobbyId).emit("message", {
+          text: `${username} has left the chat.`,
+          sender: "System",
+          timestamp: new Date(),
+        });
+    
+        console.log(`${username} removed from chat of Lobby ${lobbyId}.`);
+      }
     });
+    
 
     // 5. disconnect
     socket.on('disconnect', () => {

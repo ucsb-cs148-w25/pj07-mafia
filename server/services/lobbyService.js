@@ -139,7 +139,7 @@ function removePlayer(socketId) {
           return { lobbyId: lid, players: [] };
         }
       }
-
+      
       return {
         lobbyId: lid,
         players: lobby.players.map((p) => ({

@@ -30,6 +30,7 @@ const ChatroomPage = () => {
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isFullRuleDropdownOpen, setIsFullRuleDropdownOpen] = useState(false);
   const [is404RuleDropdownOpen, setIs404RuleDropdownOpen] = useState(false);
+  const [isPlayersDropdownOpen, setIsPlayersDropdownOpen] = useState(false);
 
   // Basic user info
   const [username, setUsername] = useState("");
@@ -71,7 +72,22 @@ const ChatroomPage = () => {
         setShowWinnerPopup(true);
       }, 3000);
     }
-  }, [winner]);  
+  }, [winner]); 
+
+
+  useEffect(() => {
+    const handleChatroomUpdated = ({ players: updatedPlayers }) => {
+      debugLog("chatroomUpdated", updatedPlayers);
+      setPlayers(updatedPlayers);
+    };
+  
+    socket.on("chatroomUpdated", handleChatroomUpdated);
+  
+    return () => {
+      socket.off("chatroomUpdated", handleChatroomUpdated);
+    };
+  }, []);
+  
 
   // 1. Load username
   useEffect(() => {
@@ -131,6 +147,11 @@ const ChatroomPage = () => {
         navigate("/");
       } else {
         debugLog("Joined chatroom, now requesting role...");
+
+        if (res?.players) {
+          setPlayers(res.players);  // we just got the entire list from the server
+        }
+
         socket.emit("requestRole", { lobbyId });
       }
     });
@@ -140,6 +161,7 @@ const ChatroomPage = () => {
       socket.emit("leaveChatroom", { lobbyId, username });
     };
   }, [lobbyId, username, navigate]);
+
 
   // 6. Phase updates
   useEffect(() => {
@@ -418,6 +440,32 @@ const ChatroomPage = () => {
 
           {/* Dropdown entries container */}
           <div className="role-info-container">
+          {/* Players List Dropdown */}
+          <div className="dropdown-entry">
+            <div
+              className="dropdown-header"
+              onClick={() => setIsPlayersDropdownOpen((prev) => !prev)} // Now toggling only Players dropdown
+            >
+              <div className="dropdown-title">Players</div>
+              <div className="dropdown-icon">
+                {isPlayersDropdownOpen ? "▼" : "►"}
+              </div>
+            </div>
+            {isPlayersDropdownOpen && (
+              <div className="dropdown-content">
+                <ul className="player-list">
+                  {players.concat(username).filter((player, index, self) => self.indexOf(player) === index) // Ensure no duplicates
+                    .map((player, index) => (
+                      <li key={index} 
+                          className={`player-item ${player === username ? "current-user" : ""}`}>
+                        {player} {player === username ? "(You)" : ""}
+                      </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
             {role && (
               <div className="dropdown-entry">
                 <div
@@ -560,7 +608,7 @@ const ChatroomPage = () => {
             )}
           </div>
           <div className="role-image">
-          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen || isPlayersDropdownOpen) && (
             <img
               src={
                 isEliminated
@@ -591,7 +639,6 @@ const ChatroomPage = () => {
           <button
             className="return-home-button"
             onClick={() => {
-              socket.emit("leaveChatroom", { lobbyId, username });
               navigate("/");
             }}
           >
