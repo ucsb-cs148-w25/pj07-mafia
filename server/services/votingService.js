@@ -7,6 +7,31 @@ const { v4: uuidv4 } = require("uuid");
 const votingSessions = {};        // { [lobbyId]: VotingSession[] }
 const eliminatedPlayers = {};     // { [lobbyId]: Set of usernames }
 
+// Generic function to calculate a majority vote result
+function calculateResultGeneric(votesObj, totalVoters) {
+  const voteCounts = {};
+  for (const target of Object.values(votesObj)) {
+    voteCounts[target] = (voteCounts[target] || 0) + 1;
+  }
+  let maxVotes = 0;
+  let candidate = null;
+  let tie = false;
+  for (const [target, count] of Object.entries(voteCounts)) {
+    if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
+    if (count > maxVotes) {
+      maxVotes = count;
+      candidate = target;
+      tie = false;
+    } else if (count === maxVotes) {
+      tie = true;
+    }
+  }
+  if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r" || maxVotes < totalVoters / 2) {
+    return null;
+  }
+  return candidate;
+}
+
 /**
  * startVoting:
  * Creates a new VotingSession, populates newSession.players,
@@ -22,6 +47,7 @@ function startVoting(lobbyId, voteType) {
 
   const voteId = uuidv4();
   const newSession = new VotingSession(lobbyId, voteId, voteType);
+  newSession.detectiveResultEmitted = false;
 
   const lobby = lobbyService.getLobby(lobbyId);
   if (!lobby) {
@@ -53,6 +79,19 @@ function startVoting(lobbyId, voteType) {
         newSession.voters.add(player.username);
       }
     });
+
+    // Additionally, collect doctor and detective voters.
+    lobby.players.forEach(player => {
+      if (player.isAlive && !eliminatedPlayers[lobbyId].has(player.username)) {
+        if (player.role && player.role.toLowerCase() === "doctor") {
+          newSession.doctorVoters.add(player.username);
+        }
+        if (player.role && player.role.toLowerCase() === "detective") {
+          newSession.detectiveVoters.add(player.username);
+        }
+      }
+    });
+  
   } else {
     lobby.players.forEach(player => {
       // all players are candidates
@@ -100,42 +139,48 @@ function castVote(lobbyId, voteId, voter, target) {
   console.log(`[VOTING] ${voter} voted for ${target} in session ${voteId} (Lobby ${lobbyId}).`);
 }
 
-function calculateResults(lobbyId, voteId) {
+function castDoctorVote(lobbyId, voteId, voter, target) {
   const session = votingSessions[lobbyId]?.find((s) => s.voteId === voteId);
-  if (!session) return null;
-
-  const voteCounts = {};
-  for (const target of Object.values(session.votes)) {
-    voteCounts[target] = (voteCounts[target] || 0) + 1;
+  if (!session) {
+    console.warn(`[VOTING] No session ${voteId} in lobby ${lobbyId}.`);
+    return;
   }
-
-  let maxVotes = 0;
-  let candidate = null;
-  let tie = false;
-
-  // Determine which candidate received the highest number of votes
-  for (const [target, count] of Object.entries(voteCounts)) {
-    console.log("[VOTING SERVICE]", target, count)
-    if (target === "s3cr3t_1nv1s1bl3_pl@y3r") continue;
-    if (count > maxVotes) {
-      maxVotes = count;
-      candidate = target;
-      tie = false;
-    } else if (count === maxVotes) {
-      tie = true;
-    }
+  if (session.doctorVotes.hasOwnProperty(voter)) {
+    console.warn(`[VOTING] Duplicate doctor vote from ${voter} in session ${voteId}.`);
+    return;
   }
-
-  // If there is a tie or the winner is the secret token, no one is eliminated.
-  if (tie || candidate === "s3cr3t_1nv1s1bl3_pl@y3r") {
-    console.log(
-      `[VOTING] session ${voteId} in lobby ${lobbyId} ended with a tie or abstention.`
-    );
-    return null;
+  if (!session.doctorVoters || !session.doctorVoters.has(voter)) {
+    console.warn(`[VOTING] ${voter} is not a valid doctor voter in session ${voteId}.`);
+    return;
   }
+  if (!session.players.has(target) && target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+    console.warn(`[VOTING] Invalid doctor vote: ${voter} -> ${target} not recognized in session ${voteId}.`);
+    return;
+  }
+  session.doctorVotes[voter] = target;
+  console.log(`[VOTING] ${voter} (doctor) voted for ${target} in session ${voteId}.`);
+}
 
-  console.log(`[VOTING] session ${voteId} in lobby ${lobbyId} ended. Eliminated: ${candidate}`);
-  return candidate;
+function castDetectiveVote(lobbyId, voteId, voter, target) {
+  const session = votingSessions[lobbyId]?.find((s) => s.voteId === voteId);
+  if (!session) {
+    console.warn(`[VOTING] No session ${voteId} in lobby ${lobbyId}.`);
+    return;
+  }
+  if (session.detectiveVotes.hasOwnProperty(voter)) {
+    console.warn(`[VOTING] Duplicate detective vote from ${voter} in session ${voteId}.`);
+    return;
+  }
+  if (!session.detectiveVoters || !session.detectiveVoters.has(voter)) {
+    console.warn(`[VOTING] ${voter} is not a valid detective voter in session ${voteId}.`);
+    return;
+  }
+  if (!session.players.has(target) && target !== "s3cr3t_1nv1s1bl3_pl@y3r") {
+    console.warn(`[VOTING] Invalid detective vote: ${voter} -> ${target} not recognized in session ${voteId}.`);
+    return;
+  }
+  session.detectiveVotes[voter] = target;
+  console.log(`[VOTING] ${voter} (detective) voted for ${target} in session ${voteId}.`);
 }
   
 function checkWinCondition(lobbyId) {
@@ -168,34 +213,43 @@ function checkWinCondition(lobbyId) {
 }
   
 
-  function endVoting(lobbyId, voteId) {
-    const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
-    if (sessionIndex === -1 || sessionIndex === undefined)
-      return { eliminated: null, winner: null };
-  
-    const eliminatedPlayer = calculateResults(lobbyId, voteId);
-  
-    if (eliminatedPlayer) {
-      eliminatedPlayers[lobbyId].add(eliminatedPlayer);
-      const lobby = lobbyService.getLobby(lobbyId);
-      if (lobby) {
-        const p = lobby.players.find(pl => pl.username === eliminatedPlayer);
-        if (p) {
-          p.isAlive = false;
-        }
+function endVoting(lobbyId, voteId) {
+  const sessionIndex = votingSessions[lobbyId]?.findIndex((s) => s.voteId === voteId);
+  if (sessionIndex === -1 || sessionIndex === undefined)
+    return { eliminated: null, winner: null, detectiveResult: null };
+
+  const session = votingSessions[lobbyId][sessionIndex];
+
+  let mafiaResult = calculateResultGeneric(session.votes, session.voters.size);
+  let doctorResult = calculateResultGeneric(session.doctorVotes, session.doctorVoters.size);
+
+  // if the doctor vote result and the mafia vote result are the same, no one is eliminated.
+  if (mafiaResult && doctorResult && mafiaResult === doctorResult) {
+    console.log(`[VOTING] Doctor vote saved ${mafiaResult}. No elimination.`);
+    mafiaResult = null;
+  }
+
+  if (mafiaResult) {
+    eliminatedPlayers[lobbyId].add(mafiaResult);
+    const lobby = lobbyService.getLobby(lobbyId);
+    if (lobby) {
+      const p = lobby.players.find(pl => pl.username === mafiaResult);
+      if (p) {
+        p.isAlive = false;
       }
     }
-  
-    // Remove the voting session
-    votingSessions[lobbyId].splice(sessionIndex, 1);
-  
-    const winner = checkWinCondition(lobbyId);
-    if (winner) {
-      console.log(`[GAME OVER] ${winner.toUpperCase()} wins the game.`);
-    }
-  
-    return { eliminated: eliminatedPlayer, winner };
-  }  
+  }
+
+  // Remove the voting session.
+  votingSessions[lobbyId].splice(sessionIndex, 1);
+
+  const winner = checkWinCondition(lobbyId);
+  if (winner) {
+    console.log(`[GAME OVER] ${winner.toUpperCase()} wins the game.`);
+  }
+
+  return { eliminated: mafiaResult, winner };
+}
 
 function getVotingSessions(lobbyId) {
   return votingSessions[lobbyId] || [];
@@ -208,7 +262,10 @@ function getSession(lobbyId, voteId) {
 module.exports = {
   startVoting,
   castVote,
+  castDoctorVote,
+  castDetectiveVote,
   endVoting,
   getVotingSessions,
   getSession,
+  calculateResultGeneric
 };

@@ -50,7 +50,7 @@
   justify-content: space-between;
   height: 100%;
   box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.3), 4px 0px 6px rgba(88, 0, 0, 0.3);
-  min-width: 200px; /* Prevents it from becoming too small */
+  min-width: 0px; /* Prevents it from becoming too small */
   max-width: 600px; /* Prevents it from becoming too large */
   position: relative;
 }
@@ -410,19 +410,40 @@
   color: #f9ecd2;
 }
 
-/* Fade in/out animation for the elimination message */
-.elimination-message {
+.elimination-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.9); /* Dark overlay */
+  z-index: 9999; /* Ensures it covers everything */
+  display: flex;
+  flex-direction: column;  /* Stacks image and message vertically */
+  align-items: center;  /* Centers horizontally */
+  justify-content: center;  /* Centers vertically */
+  animation: fadeOutOverlay 6s forwards;
+}
+
+@keyframes fadeOutOverlay {
+  0% { opacity: 1; }  /* Fully visible at start */
+  95% { opacity: 1; } /* Hold the dimmed effect */
+  100% { opacity: 0; } /* Fade out */
+}
+
+.elimination-image img {
+  width: 500px; /* Adjust this as needed */
+  height: auto;
+  animation: fadeInOut 6s forwards;
+}
+
+.elimination-message {
   font-family: 'gothic';
   font-size: 2rem;
   color: red;
-  z-index: 1000;
-  opacity: 0;
   white-space: nowrap;
   text-align: center;
+  opacity: 0;
   animation: fadeInOut 6s forwards;
 }
 
@@ -435,7 +456,23 @@
 
 /* Dim the entire chatroom when eliminated */
 .chatroom-container.eliminated {
-  filter: brightness(0.9) hue-rotate(100deg) saturate(0.6) !important;
+  animation: applyFilter 6s forwards;
+}
+
+@keyframes applyFilter {
+  0% {
+    filter: none;
+  }
+  95% {
+    filter: none;
+  }
+  100% {
+    filter: brightness(0.9) hue-rotate(100deg) saturate(0.6);
+  }
+}
+
+.chatroom-container.eliminated-winner {
+  filter: none
 }
 
 /* Disable pointer events for the input area when eliminated */
@@ -491,6 +528,7 @@
   border-radius: 50%;
   width: 60px;
   height: 60px;
+  font-family: 'serif';
   font-size: 1.2rem;
   cursor: pointer;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
@@ -503,6 +541,20 @@
 
 .dropdown-header {
   font-family: serif;
+}
+
+.role-image {
+  display: flex;
+  justify-content: center;
+}
+
+.role-image img {
+  width: 200px;   /* Shrinks the image to 50% of its original width */
+  position: relative;
+  top: 90px;
+  padding-left: 15px;
+  padding-right: 15px;
+  height: auto; /* Maintains the aspect ratio */
 }
 /* .night-mode .role-banner {
   color: #110101;

@@ -1,9 +1,9 @@
 // constants.js
 
 // lobby constants
-const DAY_DURATION = 20;
+const DAY_DURATION = 90;
 const VOTING_DURATION = 30;
-const NIGHT_DURATION = 40;
+const NIGHT_DURATION = 60;
 
 //role constants
 const MIN_PLAYERS = 6;

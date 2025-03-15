@@ -15,6 +15,13 @@ class VotingSession {
       this.voters = new Set();  // Voters in this vote
       this.votes = {}; // { voterUsername: targetUsername }
       this.hasEnded = false;
+
+      this.doctorVotes = {};      // Map: doctor voter username -> target saved
+      this.detectiveVotes = {};   // Map: detective voter username -> target investigated
+      this.doctorVoters = new Set();   // Eligible doctor voters
+      this.detectiveVoters = new Set(); // Eligible detective voters
+
+      this.detectiveResultEmitted = false;
     }
   }
   

@@ -6,6 +6,19 @@ import WinnerPopup from "../components/WinnerPopup";
 import "../styles/ChatroomPage.css";
 import config from "../config";
 
+import mafiaImage from "../images/mafia.png";
+import mafiaNightImage from "../images/mafia-night.png";
+import villagerImage from "../images/villager.png";
+import villagerNightImage from "../images/villager-night.png";
+import detectiveImage from "../images/detective.png";
+import detectiveNightImage from "../images/detective-night.png";
+import doctorImage from "../images/doctor.png";
+import doctorNightImage from "../images/doctor-night.png";
+import ghostImage from "../images/ghost.png";
+import killVillager from "../images/kill-villager.png";
+import killDoctor from "../images/kill-doctor.png";
+import killDetective from "../images/kill-detective.png";
+
 const ChatroomPage = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
@@ -94,7 +107,7 @@ const ChatroomPage = () => {
     const handleMessage = (m) => {
       debugLog("message", m);
       setMessages((prev) => [...prev, m]);
-      if (currentPhase === "day"){ //only updates log during the day (for future mafia discussion integration)
+      if (currentPhase !== "night"){ //only updates log during the day and voting
         if (m.sender !== "System" && !m.sender.startsWith("Ghost_")){
           setConversationLog((prev) => [...prev, { sender: m.sender, content: m.text }]);
         }
@@ -145,7 +158,7 @@ const ChatroomPage = () => {
   useEffect(() => {
     // Only non-eliminated players should trigger the event
     if (!isEliminated && lobbyId && role) {
-      if (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia")) {
+      if (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() !== "villager")) {
         const voteTypeToEmit = currentPhase === "voting" ? "villager" : "mafia";
         socket.emit("start_vote", { voteType: voteTypeToEmit, lobbyId });
       }
@@ -155,7 +168,7 @@ const ChatroomPage = () => {
   // 8. Manual voting popup trigger button: now just opens the voting popup.
   useEffect(() => {
     // Show the vote button for eligible players (if not eliminated) so they can choose when to vote
-    if (!isEliminated && (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() === "mafia"))) {
+    if (!isEliminated && (currentPhase === "voting" || (currentPhase === "night" && role.toLowerCase() !== "villager"))) {
       setShowVoteButton(true);
     } else {
       setShowVoteButton(false);
@@ -253,7 +266,7 @@ const ChatroomPage = () => {
     }
 
     // If it's day and not system => add to conversation log
-    if (currentPhase === "day") {
+    if (currentPhase !== "night") {
       const newEntry = { sender: username, content: newText };
       const updatedLog = [...conversationLog, newEntry];
       setConversationLog(updatedLog);
@@ -351,12 +364,26 @@ const ChatroomPage = () => {
     };
   }, [isResizing]);
 
+  // displaying detective messages
+  useEffect(() => {
+    const handleDetectivePrivateMessage = (msg) => {
+      console.log("Received detective private message", msg);
+      setMessages((prev) => [...prev, msg]);
+    };
+  
+    socket.on("detective_private_message", handleDetectivePrivateMessage);
+    
+    return () => {
+      socket.off("detective_private_message", handleDetectivePrivateMessage);
+    };
+  }, []);
+
   return (
-    <div
-      className={`chatroom-container ${
-        currentPhase === "night" || isEliminated ? "night-mode" : ""
-      } ${isEliminated ? "eliminated" : ""}`}
-    >
+    <div className={`chatroom-container ${
+         currentPhase === "night" || isEliminated ? "night-mode" : ""
+         } ${isEliminated && winner ? "eliminated-winner" : ""} 
+           ${isEliminated && !winner ? "eliminated" : ""
+         }`}>
       {/* 1) Full-width chatroom header */}
       <div className="chatroom-header">
         <h2>{isEliminated? "404 ZONE" : currentPhase === "voting" ? "DAY" : currentPhase.toUpperCase()}</h2>
@@ -377,6 +404,7 @@ const ChatroomPage = () => {
               setShowWinnerPopup(false);
               navigate("/");
             }}
+            phase={currentPhase}
           />
         )}
 
@@ -531,6 +559,34 @@ const ChatroomPage = () => {
               </div>
             )}
           </div>
+          <div className="role-image">
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+            <img
+              src={
+                isEliminated
+                  ? ghostImage
+                  : role === 'Mafia'
+                    ? currentPhase === 'night'
+                      ? mafiaNightImage
+                      : mafiaImage
+                  : role === 'Villager'
+                    ? currentPhase === 'night'
+                      ? villagerNightImage
+                      : villagerImage
+                  : role === 'Detective'
+                    ? currentPhase === 'night'
+                      ? detectiveNightImage
+                      : detectiveImage
+                  : role === 'Doctor'
+                    ? currentPhase === 'night'
+                      ? doctorNightImage
+                      : doctorImage
+                  : undefined
+              }
+              alt={role}
+            />
+          )}
+          </div>
           {/* Return to Home button */}
           <button
             className="return-home-button"
@@ -589,7 +645,9 @@ const ChatroomPage = () => {
 
             {showVoteButton && !isVoting && !isEliminated && (
             <button className="floating-vote-button" onClick={handleVoteButtonClick}>
-              {currentPhase === "voting" ? "Vote" : "Kill"}
+              {currentPhase === "voting" ? "Vote" : 
+              role.toLowerCase() === "mafia"? "Kill" :
+              role.toLowerCase() === "doctor"? "Heal" : "Inves"}
             </button>
           )}
 
@@ -619,37 +677,96 @@ const ChatroomPage = () => {
 
           {/* Voting popup */}
           {isVoting && !isEliminated && (
-            <VotingPopup
-              players={players}
-              onVote={(targetPlayer) => {
+          <VotingPopup
+            players={players}
+            onVote={(targetPlayer) => {
+              if (voteType === "villager") {
                 socket.emit("submit_vote", {
                   lobbyId,
                   voteId,
                   voter: username,
-                  target: targetPlayer,
+                  target: targetPlayer
                 });
-                setIsVoting(false);
-                setShowVoteButton(false);
-              }}
-              onClose={() => {
+              } else {
+                if (role.toLowerCase() === "doctor") {
+                  socket.emit("submit_doctor_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: targetPlayer
+                  });
+                } else if (role.toLowerCase() === "detective") {
+                  socket.emit("submit_detective_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: targetPlayer
+                  });
+                } else {
+                  socket.emit("submit_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: targetPlayer
+                  });
+                }
+              }
+              setIsVoting(false);
+              setShowVoteButton(false);
+            }}
+            onClose={() => {
+              if (voteType === "villager") {
                 socket.emit("submit_vote", {
                   lobbyId,
                   voteId,
                   voter: username,
-                  target: "s3cr3t_1nv1s1bl3_pl@y3r",
+                  target: "s3cr3t_1nv1s1bl3_pl@y3r"
                 });
-                setIsVoting(false);
-                setShowVoteButton(false);
-              }}
-              role={voteType === "mafia" ? "Mafia" : "Villager"}
-              username={username}
-              lobbyId={lobbyId}
-            />
-          )}
+              } else {
+                if (role.toLowerCase() === "doctor") {
+                  socket.emit("submit_doctor_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: "s3cr3t_1nv1s1bl3_pl@y3r"
+                  });
+                } else if (role.toLowerCase() === "detective") {
+                  socket.emit("submit_detective_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: "s3cr3t_1nv1s1bl3_pl@y3r"
+                  });
+                } else {
+                  socket.emit("submit_vote", {
+                    lobbyId,
+                    voteId,
+                    voter: username,
+                    target: "s3cr3t_1nv1s1bl3_pl@y3r"
+                  });
+                }
+              }
+              setIsVoting(false);
+              setShowVoteButton(false);
+            }}
+            role={voteType === "villager" ? "villager" : role.toLowerCase()}
+            username={username}
+            lobbyId={lobbyId}
+          />
+        )}
 
-          {showEliminationMessage && (
-            <div className="elimination-message">
-              Your presence fades into the unknown… AI takes your place.
+          {!winner && showEliminationMessage && (
+            <div className="elimination-overlay">
+              <div className="elimination-image">
+                <img src={role === 'Villager' ? killVillager :
+                          role === 'Doctor' ? killDoctor : 
+                          role === 'Detective' ? killDetective :
+                          undefined}>
+                </img>
+              </div>
+              <div className="elimination-message">
+                Your presence fades into the unknown… AI takes your place.
+              </div>
             </div>
           )}
         </div>
