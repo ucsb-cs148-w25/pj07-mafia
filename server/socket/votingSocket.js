@@ -19,7 +19,7 @@ function concludeVoting(io, lobbyId, voteId, voteType) {
     msg =
       voteType === "mafia"
         ? `An eerie silence lingers… all players remain as they are… for now.`
-        : `The vote is tied. All players remain as they are… for now.`;
+        : `The vote remains divided. All players remain as they are… for now.`;
   }
   io.to(lobbyId).emit("message", {
     sender: "System",
@@ -38,23 +38,26 @@ function checkAndConclude(io, lobbyId, voteId, session) {
       Object.keys(session.detectiveVotes).length === session.detectiveVoters.size && !session.detectiveResultEmitted) {
       // Calculate detective result using the generic function from votingService
       const detectiveResult = VotingService.calculateResultGeneric(session.detectiveVotes, session.detectiveVoters.size);
-      const lobby = lobbyService.getLobby(lobbyId);
-      const detectiveCandidate = lobby.players.find(p => p.username === detectiveResult);
-      let isSuspicious = false;
-      if (detectiveCandidate && 
-        (detectiveCandidate.role.toLowerCase() === "mafia") || !detectiveCandidate.isAlive) {
-        // is mafia or died
-        isSuspicious = true;
+      if (detectiveResult){
+        const lobby = lobbyService.getLobby(lobbyId);
+        const detectiveCandidate = lobby.players.find(p => p.username === detectiveResult);
+        console.log(`[DETECTIVE CANDIDATES]: ${detectiveResult}`)
+        let isSuspicious = false;
+        if (detectiveCandidate && 
+          (detectiveCandidate.role.toLowerCase() === "mafia") || !detectiveCandidate.isAlive) {
+          // is mafia or died
+          isSuspicious = true;
+        }
+        const detectiveMsg = isSuspicious
+          ? `Investigation clear… < ${detectiveResult} > is suspicious.`
+          : `Investigation clear… < ${detectiveResult} > seems safe… for now.`;
+        io.to(`${lobbyId}_detectives`).emit("detective_private_message", {
+            sender: "[DETECTIVE RESULT]",
+            text: detectiveMsg,
+            timestamp: new Date()
+          });
+        session.detectiveResultEmitted = true;
       }
-      const detectiveMsg = isSuspicious
-        ? `Investigation clear… < ${detectiveResult} > is suspicious.`
-        : `Investigation clear… < ${detectiveResult} > seems safe… for now.`;
-      io.to(`${lobbyId}_detectives`).emit("detective_private_message", {
-          sender: "[DETECTIVE RESULT]",
-          text: detectiveMsg,
-          timestamp: new Date()
-        });
-      session.detectiveResultEmitted = true;
     }
 
     if (
