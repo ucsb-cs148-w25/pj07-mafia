@@ -123,15 +123,13 @@ function initChatSocket(io) {
       if (phase === "day" || phase === "voting") {
         // all alive
         lobby.players.forEach((pl) => {
-          if (pl.isAlive) {
             io.to(pl.socketId).emit("message", msgObj);
-          }
         });
       } else if (phase === "night") {
         // mafia only sees mafia, non-mafia sees self
         if (isMafia) {
           lobby.players.forEach((pl) => {
-            if (pl.isAlive && (pl.role || "").toLowerCase() === "mafia") {
+            if ((pl.role || "").toLowerCase() === "mafia") {
               io.to(pl.socketId).emit("message", msgObj);
             }
           });
