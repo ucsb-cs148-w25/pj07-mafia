@@ -87,6 +87,23 @@
   font-family: serif;
   overflow-y: auto;
 }
+.player-list {
+  list-style: none;
+  padding: 0;
+}
+
+.player-item {
+  font-family: serif;
+  font-size: 1rem;
+  padding: 5px 10px;
+  color: #110101;
+}
+
+.player-item.current-user {
+  font-weight: bold;
+  color: #008000; /* Green to indicate self */
+}
+
 
 /* Container for the two dropdown entries */
 .role-info-container {
@@ -409,6 +426,21 @@
 .night-mode .role-rules{
   color: #f9ecd2;
 }
+
+/* Night mode styling for the Players list */
+.night-mode .player-list {
+  color: #f9ecd2; /* Same as role rules text */
+}
+
+.night-mode .player-item {
+  color: #f9ecd2; /* Make player names visible */
+}
+
+.night-mode .player-item.current-user {
+  font-weight: bold;
+  color: #00ff00; /* Bright green for self */
+}
+
 
 .elimination-overlay {
   position: fixed;

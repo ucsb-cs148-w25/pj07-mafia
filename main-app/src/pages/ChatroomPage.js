@@ -30,6 +30,7 @@ const ChatroomPage = () => {
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isFullRuleDropdownOpen, setIsFullRuleDropdownOpen] = useState(false);
   const [is404RuleDropdownOpen, setIs404RuleDropdownOpen] = useState(false);
+  const [isPlayersDropdownOpen, setIsPlayersDropdownOpen] = useState(false);
 
   // Basic user info
   const [username, setUsername] = useState("");
@@ -418,6 +419,32 @@ const ChatroomPage = () => {
 
           {/* Dropdown entries container */}
           <div className="role-info-container">
+          {/* Players List Dropdown */}
+          <div className="dropdown-entry">
+            <div
+              className="dropdown-header"
+              onClick={() => setIsPlayersDropdownOpen((prev) => !prev)} // Now toggling only Players dropdown
+            >
+              <div className="dropdown-title">Players</div>
+              <div className="dropdown-icon">
+                {isPlayersDropdownOpen ? "▼" : "►"}
+              </div>
+            </div>
+            {isPlayersDropdownOpen && (
+              <div className="dropdown-content">
+                <ul className="player-list">
+                  {players.concat(username).filter((player, index, self) => self.indexOf(player) === index) // Ensure no duplicates
+                    .map((player, index) => (
+                      <li key={index} 
+                          className={`player-item ${player === username ? "current-user" : ""}`}>
+                        {player} {player === username ? "(You)" : ""}
+                      </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
             {role && (
               <div className="dropdown-entry">
                 <div
