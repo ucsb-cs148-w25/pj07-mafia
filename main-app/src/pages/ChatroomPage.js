@@ -72,7 +72,22 @@ const ChatroomPage = () => {
         setShowWinnerPopup(true);
       }, 3000);
     }
-  }, [winner]);  
+  }, [winner]); 
+
+
+  useEffect(() => {
+    const handleChatroomUpdated = ({ players: updatedPlayers }) => {
+      debugLog("chatroomUpdated", updatedPlayers);
+      setPlayers(updatedPlayers);
+    };
+  
+    socket.on("chatroomUpdated", handleChatroomUpdated);
+  
+    return () => {
+      socket.off("chatroomUpdated", handleChatroomUpdated);
+    };
+  }, []);
+  
 
   // 1. Load username
   useEffect(() => {
@@ -132,6 +147,11 @@ const ChatroomPage = () => {
         navigate("/");
       } else {
         debugLog("Joined chatroom, now requesting role...");
+
+        if (res?.players) {
+          setPlayers(res.players);  // we just got the entire list from the server
+        }
+
         socket.emit("requestRole", { lobbyId });
       }
     });
@@ -141,6 +161,7 @@ const ChatroomPage = () => {
       socket.emit("leaveChatroom", { lobbyId, username });
     };
   }, [lobbyId, username, navigate]);
+
 
   // 6. Phase updates
   useEffect(() => {
@@ -587,7 +608,7 @@ const ChatroomPage = () => {
             )}
           </div>
           <div className="role-image">
-          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen) && (
+          {!(isRoleDropdownOpen || isFullRuleDropdownOpen || is404RuleDropdownOpen || isPlayersDropdownOpen) && (
             <img
               src={
                 isEliminated
@@ -618,7 +639,6 @@ const ChatroomPage = () => {
           <button
             className="return-home-button"
             onClick={() => {
-              socket.emit("leaveChatroom", { lobbyId, username });
               navigate("/");
             }}
           >
