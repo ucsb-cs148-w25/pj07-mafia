@@ -34,7 +34,8 @@ function checkAndConclude(io, lobbyId, voteId, session) {
     console.log( `[CHECK] Mafias: ${session.voters.size}; Doctors: ${session.doctorVoters.size}; Detectives: ${session.detectiveVoters.size}` );
 
     // Immediately send detective investigation result when all detective votes are in
-    if (Object.keys(session.detectiveVotes).length === session.detectiveVoters.size && !session.detectiveResultEmitted) {
+    if (session.detectiveVoters.size > 0 && 
+      Object.keys(session.detectiveVotes).length === session.detectiveVoters.size && !session.detectiveResultEmitted) {
       // Calculate detective result using the generic function from votingService
       const detectiveResult = VotingService.calculateResultGeneric(session.detectiveVotes, session.detectiveVoters.size);
       const lobby = lobbyService.getLobby(lobbyId);
@@ -46,8 +47,8 @@ function checkAndConclude(io, lobbyId, voteId, session) {
         isSuspicious = true;
       }
       const detectiveMsg = isSuspicious
-        ? `Investigation clear… ${detectiveResult} is suspicious.`
-        : `Investigation clear… ${detectiveResult} seems safe… for now.`;
+        ? `Investigation clear… < ${detectiveResult} > is suspicious.`
+        : `Investigation clear… < ${detectiveResult} > seems safe… for now.`;
       io.to(`${lobbyId}_detectives`).emit("detective_private_message", {
           sender: "[DETECTIVE RESULT]",
           text: detectiveMsg,
