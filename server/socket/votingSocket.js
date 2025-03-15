@@ -5,7 +5,7 @@ const lobbyService = require("../services/lobbyService");
 // Object to track if a vote has already been ended
 const endedVotes = {};
 
-function concludeVoting(io, lobbyId, voteId, voteType) {
+function concludeVoting(io, lobbyId, voteId, voteType, complete) {
   // Prevent duplicate voting session termination.
   if (endedVotes[voteId]) return;
   endedVotes[voteId] = true;
@@ -14,15 +14,17 @@ function concludeVoting(io, lobbyId, voteId, voteType) {
   const result = VotingService.endVoting(lobbyId, voteId);
   io.to(lobbyId).emit("voting_complete", { eliminated: result.eliminated, winner: result.winner });
   
-  // Update lobby phase and start the day/night cycle.
-  const lobby = lobbyService.getLobby(lobbyId);
-  if (lobby) {
-    if (lobby.phase === "voting") {
-      lobby.phase = "night";
-    } else if (lobby.phase === "night") {
-      lobby.phase = "day";
+  // Only update lobby phase and start the day/night cycle if every vote is submitted.
+  if (complete) {
+    const lobby = lobbyService.getLobby(lobbyId);
+    if (lobby) {
+      if (lobby.phase === "voting") {
+        lobby.phase = "night";
+      } else if (lobby.phase === "night") {
+        lobby.phase = "day";
+      }
+      lobbyService.startDayNightCycle(lobbyId, io);
     }
-    lobbyService.startDayNightCycle(lobbyId, io);
   }
   
   let msg;
@@ -80,13 +82,13 @@ function checkAndConclude(io, lobbyId, voteId, session) {
       Object.keys(session.detectiveVotes).length === session.detectiveVoters.size // all detectives voted
     ) {
       console.log("[VOTING] All mafia, doctor, and detective votes submitted. Ending voting session.");
-      concludeVoting(io, lobbyId, voteId, session.voteType);
+      concludeVoting(io, lobbyId, voteId, session.voteType, true);
     }
   } else {
     // For other vote types, use the standard check.
     if (Object.keys(session.votes).length === session.voters.size) {
       console.log("[VOTING] All votes submitted. Ending voting session.");
-      concludeVoting(io, lobbyId, voteId, session.voteType);
+      concludeVoting(io, lobbyId, voteId, session.voteType, true);
     }
   }
 }
@@ -131,7 +133,7 @@ function initVotingSocket(io) {
           const currentSession = VotingService.getSession(lobbyId, voteId);
           if (currentSession) {
             console.log("[TIMEOUT] Time limit reached. Ending voting session.");
-            concludeVoting(io, lobbyId, voteId, voteType);
+            concludeVoting(io, lobbyId, voteId, voteType, false);
           }
         }, duration * 1000);
       }
