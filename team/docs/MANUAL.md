@@ -30,9 +30,21 @@ The game continues until one faction--- either the Humans(villagers and special 
 
 ## The Roles
 
-- Villager: Their job is to vote out to try and find out who is also a human and to work together with them to vote out Mafia.
-- Mafia: Their job is to manipulate the villagers during the day to not get voted out and replace everyone with AI at night by voting on who to replace.
-- Doctor: At night they choose who to "protect" and if Mafia has the same person selected to be killed the chosen player lives for another day.
-- Detective: At night they choose who to "investigate" and if they have selected a Mafia/Ai person it returns "You have found someone who is Mafia or Ai" and if they selected an innocent villager it returns "The person you chose is innocent."
+### Villager: 
+- Their job is to vote out to try and find out who is also a human and to work together with them to vote out Mafia.
+- They are censored by the AI during the day as the messages they type and send in the chatbox are given to AI to be reworded while maintaining the meaning. This means their messages are sent slower than usual.
+- They can not talk during the night.
+### Mafia
+- Their job is to manipulate the villagers during the day to not get voted out and replace everyone with AI at night by voting on who to replace.
+- They are not censored by AI so their messages are unfiltered. Their job is to filter themselves while creating chaos in the chat.
+- Since their messages are not censored they also come out right after clicking send without a pause.
+- They can talk during the night to fellow Mafia and decide on a vote to kill.
+### Doctor
+- At night they choose who to "protect" and if Mafia has the same person selected to be killed the chosen player lives for another day.
+- They have the same restrictions as villager but at night they can vote to heal.
+### Detective
+- At night they choose who to "investigate" and if they have selected a Mafia/Ai person it returns "The person you have selected is suspicious" and if they selected an innocent villager it returns "The person you chose is innocent."
+- Their investigation only tells them if a player is an alive villager role, it does not explicitly tell them if the player is Mafia or Ai, they have to decide for themselves and help guide the villagers.
+- They have the same restrictions as villager but at night they can investigate.
 
 
