@@ -14,6 +14,9 @@
   - Enabled AI to speak on behalf of eliminated players.
 - **Backend Unit Testing:**
   - Developed unit tests for the voting system, covering both configuration and implementation.
+- **Role Voting Feature:**
+  - Rewrote role voting for smooth integration with the main game
+  - Implemented the doctor healing, detective investigating feature
 
 #### Frontend
 - **Chatroom UI:**
@@ -56,6 +59,8 @@
 - **Sidebar Implementation:**
   - Worked with Andy to integrate a sidebar into the chatroom.
   - Developed the sidebar template for Andy to populate with game rules.
+- **Adaptive Phase Debugging:**
+  - Worked with Tyler to incorporate a functional adaptive phase feature.
 
 ### Non-Code Contributions
 - **AI Coding Experiment Documentation:**
