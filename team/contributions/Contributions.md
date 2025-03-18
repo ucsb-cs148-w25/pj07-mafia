@@ -51,6 +51,7 @@
 - Implemented early prototype of day/night cycle-- having a timer and then switching the frontend and backend from day/night gamestates
 - working on adaptive phase change so that day turns to night when players finish voting
 - working on allowing users to talk during voting cycles
+- Created a player list to help players keep track of who is in the game.
 
 ## Non-Code related Contributions
 - Provided documentation for how backend should owrk
