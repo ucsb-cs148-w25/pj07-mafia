@@ -100,6 +100,10 @@
 - Implemented a feature to copy the Lobby ID.
 - Integrated a chat bar sidebar for better in-game communication.
 
+**Winning Condition**
+- Modified voting sessions to emit the winning result alongside eliminated players.
+- Collaborated with Priyanka on integrating winning conditions across the frontend and backend.
+
 ## Non-Code Contributions
 
 ## Documentation:
