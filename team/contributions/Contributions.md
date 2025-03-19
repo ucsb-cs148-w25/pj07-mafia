@@ -185,3 +185,6 @@ documented close to all of the stand ups throughout the course
 - Added LICENSE.md.
 - Added .gitignore.
 - Added full feedback for Retro 1.
+
+**Final Presentation**
+- Created final presentation format and slides
